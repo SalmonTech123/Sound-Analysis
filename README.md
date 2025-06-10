@@ -2,7 +2,7 @@
 
 **Find overlapping creators across multiple TikTok sounds for targeted music marketing campaigns**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Website-blue?style=for-the-badge)](https://yourusername.github.io/Sound-Analysis)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Website-blue?style=for-the-badge)](https://salmontech.github.io/Sound-Analysis)
 [![GitHub Pages](https://img.shields.io/badge/Hosted%20on-GitHub%20Pages-green?style=for-the-badge)](https://pages.github.com/)
 
 ## 🌟 What is Sound Analysis?
@@ -121,12 +121,12 @@ Results:
 ## 🚀 Getting Started
 
 ### Option 1: Use the Live Website
-Visit: **[https://yourusername.github.io/Sound-Analysis](https://yourusername.github.io/Sound-Analysis)**
+Visit: **[https://salmontech.github.io/Sound-Analysis](https://salmontech.github.io/Sound-Analysis)**
 
 ### Option 2: Run Locally
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Sound-Analysis.git
+git clone https://github.com/salmontech/Sound-Analysis.git
 
 # Navigate to directory
 cd Sound-Analysis
@@ -180,9 +180,9 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🔗 Links
 
-- **📊 Live Demo**: [https://yourusername.github.io/Sound-Analysis](https://yourusername.github.io/Sound-Analysis)
-- **📁 GitHub Repository**: [https://github.com/yourusername/Sound-Analysis](https://github.com/yourusername/Sound-Analysis)
-- **🐛 Report Issues**: [https://github.com/yourusername/Sound-Analysis/issues](https://github.com/yourusername/Sound-Analysis/issues)
+- **📊 Live Demo**: [https://salmontech.github.io/Sound-Analysis](https://salmontech.github.io/Sound-Analysis)
+- **📁 GitHub Repository**: [https://github.com/salmontech/Sound-Analysis](https://github.com/salmontech/Sound-Analysis)
+- **🐛 Report Issues**: [https://github.com/salmontech/Sound-Analysis/issues](https://github.com/salmontech/Sound-Analysis/issues)
 
 ## 📞 Support
 
