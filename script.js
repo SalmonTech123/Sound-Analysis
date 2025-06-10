@@ -424,7 +424,6 @@ viral_creator"
                 </tr>
             `;
         }).join('');
-        }).join('');
     }
 
     // Filter creators when selection changes
