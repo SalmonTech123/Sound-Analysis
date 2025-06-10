@@ -373,28 +373,11 @@
             <h3>📋 How to Use Sound Analysis</h3>
             <ol>
                 <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of TikTok sounds you want to analyze (one per line)</li>
-                <li><strong>Configure Settings:</strong> Choose how many creators to collect per sound</li>
-                <li><strong>Start Analysis:</strong> Click to begin processing each sound</li>
-                <li><strong>View Results:</strong> See creators ranked by how many sounds they appear in</li>
-                <li><strong>Export Data:</strong> Download results in CSV or JSON format for your campaigns</li>
+                <li><strong>Collect Creator Data:</strong> Use the Sound Data Collector extension OR manually collect creator usernames from each sound</li>
+                <li><strong>Input Creator Lists:</strong> For each sound, add the creators you've found</li>
+                <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds</li>
+                <li><strong>Export Results:</strong> Download CSV files for your marketing campaigns</li>
             </ol>
-        </div>
-
-        <!-- Demo Note -->
-        <div class="demo-note">
-            <strong>🔄 Data Collection Options:</strong> You can use simulated data for testing, manually input creator lists, or use the Sound Data Collector browser extension for automated collection.
-        </div>
-        
-        <!-- Extension Integration Notice -->
-        <div id="extensionNotice" class="demo-note" style="background: #e8f5e8; border-color: #4caf50; color: #2e7d32; display: none;">
-            <strong>🚀 Extension Data Received!</strong> <span id="extensionDataInfo"></span>
-        </div>
-        
-        <!-- Debug Test Button (remove after testing) -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <button onclick="testExtensionData()" style="background: #ff9800; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
-                🧪 Test Extension Data Reception
-            </button>
         </div>
 
         <div id="status" class="status"></div>
@@ -416,55 +399,43 @@ Paste your TikTok sound URLs here..."></textarea>
                 </div>
                 
                 <div class="input-group">
-                    <label for="creatorLimit">Creators to collect per sound:</label>
+                    <label for="creatorLimit">Creators to analyze per sound:</label>
                     <select id="creatorLimit">
                         <option value="50">50 creators</option>
                         <option value="100">100 creators</option>
                         <option value="200" selected>200 creators</option>
                         <option value="500">500 creators</option>
                     </select>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">
+                        💡 This is just for reference - you'll input the actual creator lists manually
+                    </div>
                 </div>
                 
                 <button id="addSounds" class="btn">📝 Add Sounds to Analysis</button>
-                
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e8ed;">
-                    <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">🔧 Data Collection Mode:</h4>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="dataMode" value="simulated" checked style="margin: 0;">
-                            <span style="font-size: 13px;">Simulated Data (Demo)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="radio" name="dataMode" value="manual" style="margin: 0;">
-                            <span style="font-size: 13px;">Manual Input (Real Data)</span>
-                        </label>
-                    </div>
-                    
-                    <div id="manualDataSection" style="display: none;">
-                        <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 How Manual Input Works:</h4>
-                            <ol style="font-size: 12px; color: #666; margin-left: 15px; line-height: 1.6;">
-                                <li>First add your TikTok sound URLs above</li>
-                                <li>Click the button below to open the data entry form</li>
-                                <li>For each sound, paste the creators you've manually collected from TikTok</li>
-                                <li>You can paste usernames with or without @ symbols</li>
-                                <li>One username per line (e.g., "musiclover2024" or "@creator_name")</li>
-                            </ol>
-                        </div>
-                        <button id="addManualData" class="btn secondary" style="font-size: 14px; padding: 8px 16px;">📋 Open Creator Data Entry Form</button>
-                    </div>
-                </div>
             </div>
 
             <!-- Analysis Section -->
             <div class="card">
-                <h2><span class="step-number">2</span>Run Analysis</h2>
+                <h2><span class="step-number">2</span>Add Creator Data</h2>
                 
                 <div id="soundsAdded">
                     <p style="color: #666; text-align: center; padding: 20px;">No sounds added yet</p>
                 </div>
                 
-                <button id="startAnalysis" class="btn" disabled>🚀 Start Analysis</button>
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">📋 How to Add Creator Data:</h4>
+                    <ol style="font-size: 12px; color: #666; margin-left: 15px; line-height: 1.6;">
+                        <li>First add your TikTok sound URLs above</li>
+                        <li>Use the Sound Data Collector extension OR manually collect creators from TikTok</li>
+                        <li>Click the button below to open the data entry form</li>
+                        <li>For each sound, paste the creators you've found</li>
+                        <li>One username per line (with or without @ symbols)</li>
+                    </ol>
+                </div>
+                
+                <button id="addManualData" class="btn" disabled>📋 Add Creator Data</button>
+                
+                <button id="startAnalysis" class="btn" disabled style="margin-top: 10px;">🚀 Start Analysis</button>
                 
                 <div id="analysisProgress" style="display: none;">
                     <div class="progress-container">
