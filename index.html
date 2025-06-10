@@ -219,6 +219,7 @@
             border: 2px solid #e9ecef;
             border-radius: 12px;
             padding: 20px;
+            position: relative;
         }
         
         .sound-title {
@@ -359,6 +360,66 @@
         .demo-note strong {
             color: #533f03;
         }
+        
+        /* Sound item styles for the data collection section */
+        .sound-item-data {
+            background: #f8f9fa;
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .sound-item-data.has-data {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+        
+        .sound-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .sound-link:hover {
+            text-decoration: underline;
+            color: #5a67d8;
+        }
+        
+        .creator-input-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .creator-input-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .creator-input-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .creator-count {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .creator-count.has-data {
+            color: #4caf50;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -373,8 +434,8 @@
             <h3>📋 How to Use Sound Analysis</h3>
             <ol>
                 <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of TikTok sounds you want to analyze (one per line)</li>
-                <li><strong>Collect Creator Data:</strong> Use the Sound Data Collector extension OR manually collect creator usernames from each sound</li>
-                <li><strong>Input Creator Lists:</strong> For each sound, add the creators you've found</li>
+                <li><strong>Click each sound link:</strong> Use the Sound Data Collector extension to collect creator usernames</li>
+                <li><strong>Input Creator Lists:</strong> Return here and add the creators you've collected for each sound</li>
                 <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds</li>
                 <li><strong>Export Results:</strong> Download CSV files for your marketing campaigns</li>
             </ol>
@@ -398,19 +459,6 @@ https://www.tiktok.com/music/Third-Song-9876543210
 Paste your TikTok sound URLs here..."></textarea>
                 </div>
                 
-                <div class="input-group">
-                    <label for="creatorLimit">Creators to analyze per sound:</label>
-                    <select id="creatorLimit">
-                        <option value="50">50 creators</option>
-                        <option value="100">100 creators</option>
-                        <option value="200" selected>200 creators</option>
-                        <option value="500">500 creators</option>
-                    </select>
-                    <div style="font-size: 11px; color: #666; margin-top: 5px;">
-                        💡 This is just for reference - you'll input the actual creator lists manually
-                    </div>
-                </div>
-                
                 <button id="addSounds" class="btn">📝 Add Sounds to Analysis</button>
             </div>
 
@@ -422,7 +470,7 @@ Paste your TikTok sound URLs here..."></textarea>
                     <p style="color: #666; text-align: center; padding: 20px;">No sounds added yet</p>
                 </div>
                 
-                <button id="startAnalysis" class="btn" disabled style="margin-top: 15px;">🚀 Add creator data for all sounds first</button>
+                <button id="startAnalysis" class="btn" disabled>🚀 Add creator data for all sounds first</button>
                 
                 <div id="analysisProgress" style="display: none;">
                     <div class="progress-container">
