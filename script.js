@@ -1,0 +1,491 @@
+// Sound Analysis - Main JavaScript functionality
+
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const statusDiv = document.getElementById('status');
+    const soundUrlsTextarea = document.getElementById('soundUrls');
+    const creatorLimitSelect = document.getElementById('creatorLimit');
+    const addSoundsBtn = document.getElementById('addSounds');
+    const soundsAddedDiv = document.getElementById('soundsAdded');
+    const startAnalysisBtn = document.getElementById('startAnalysis');
+    const analysisProgress = document.getElementById('analysisProgress');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const resultsSection = document.getElementById('resultsSection');
+    const soundsList = document.getElementById('soundsList');
+    const minSoundsSelect = document.getElementById('minSounds');
+    const creatorsTableBody = document.getElementById('creatorsTableBody');
+    const exportCSVBtn = document.getElementById('exportCSV');
+    const exportJSONBtn = document.getElementById('exportJSON');
+    const exportTop50Btn = document.getElementById('exportTop50');
+
+    // Data storage
+    let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
+    let analysisResults = {}; // Creator overlap analysis
+
+    // Utility functions
+    function showStatus(message, type = 'info') {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.style.display = 'block';
+        
+        if (type !== 'error') {
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 4000);
+        }
+    }
+
+    function extractSoundTitle(url) {
+        try {
+            const match = url.match(/\/music\/([^?]+)/);
+            if (match) {
+                // Decode and clean up the title
+                let title = decodeURIComponent(match[1]);
+                title = title.replace(/-/g, ' '); // Replace hyphens with spaces
+                title = title.replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
+                return title;
+            }
+        } catch (error) {
+            console.error('Error extracting sound title:', error);
+        }
+        return 'Unknown Sound';
+    }
+
+    function isValidTikTokSoundUrl(url) {
+        return url.includes('tiktok.com/music/') && url.includes('-');
+    }
+
+    // Add sounds to analysis
+    addSoundsBtn.addEventListener('click', function() {
+        const urls = soundUrlsTextarea.value.trim().split('\n').filter(url => url.trim());
+        
+        if (urls.length === 0) {
+            showStatus('Please enter at least one TikTok sound URL', 'error');
+            return;
+        }
+        
+        let added = 0;
+        let invalid = 0;
+        let duplicates = 0;
+        
+        urls.forEach(url => {
+            url = url.trim();
+            if (isValidTikTokSoundUrl(url)) {
+                if (!soundsData[url]) {
+                    const title = extractSoundTitle(url);
+                    soundsData[url] = { title: title, usernames: [] };
+                    added++;
+                } else {
+                    duplicates++;
+                }
+            } else if (url.length > 0) {
+                invalid++;
+            }
+        });
+        
+        let message = '';
+        if (added > 0) {
+            message += `Added ${added} new sound(s)`;
+            if (duplicates > 0) message += `, ${duplicates} duplicate(s) skipped`;
+            if (invalid > 0) message += `, ${invalid} invalid URL(s) skipped`;
+            
+            updateSoundsDisplay();
+            showStatus(message, 'success');
+            soundUrlsTextarea.value = '';
+            startAnalysisBtn.disabled = false;
+        } else {
+            message = 'No new sounds added. ';
+            if (duplicates > 0) message += `${duplicates} were duplicates. `;
+            if (invalid > 0) message += `${invalid} had invalid URLs.`;
+            showStatus(message, 'error');
+        }
+    });
+
+    // Update sounds display
+    function updateSoundsDisplay() {
+        const soundCount = Object.keys(soundsData).length;
+        
+        if (soundCount > 0) {
+            soundsAddedDiv.innerHTML = `
+                <h4>📝 ${soundCount} Sound(s) Ready for Analysis:</h4>
+                ${Object.entries(soundsData).map(([url, data]) => `
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 8px 0; border-left: 4px solid #667eea;">
+                        <div style="font-weight: 600; color: #333; margin-bottom: 4px;">${escapeHtml(data.title)}</div>
+                        <div style="font-size: 11px; color: #666; margin-bottom: 6px;">${escapeHtml(url)}</div>
+                        <div style="font-size: 12px; color: #667eea;">
+                            ${data.usernames.length > 0 ? `✅ ${data.usernames.length} creators collected` : '⏳ Pending analysis'}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            
+            startAnalysisBtn.textContent = `🚀 Analyze ${soundCount} Sound(s)`;
+        } else {
+            soundsAddedDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No sounds added yet</p>';
+            startAnalysisBtn.disabled = true;
+            startAnalysisBtn.textContent = '🚀 Start Analysis';
+        }
+    }
+
+    // Generate simulated creator data (for demo purposes)
+    function generateSimulatedCreators(count, soundTitle) {
+        const creators = [];
+        const soundHash = simpleHash(soundTitle);
+        
+        // Create some common creators across sounds for realistic overlap
+        const commonCreators = [
+            'musiclover_2024', 'tiktok_dancer', 'viral_vibes', 'sound_creator', 'music_maven',
+            'beat_drops', 'melody_maker', 'rhythm_king', 'audio_artist', 'track_master',
+            'song_specialist', 'music_influencer', 'sound_sage', 'beat_builder', 'tune_titan'
+        ];
+        
+        // Add some common creators (for overlap simulation)
+        const numCommon = Math.min(15, Math.floor(count * 0.15)); // 15% overlap
+        for (let i = 0; i < numCommon; i++) {
+            creators.push(commonCreators[i % commonCreators.length]);
+        }
+        
+        // Generate unique creators for this sound
+        for (let i = numCommon; i < count; i++) {
+            creators.push(`creator_${soundHash}_${i - numCommon}`);
+        }
+        
+        // Shuffle the array to make it more realistic
+        return shuffleArray(creators);
+    }
+
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash) % 1000;
+    }
+
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    // Simulate creator collection process
+    async function simulateCreatorCollection(soundUrl, targetCount) {
+        const soundTitle = soundsData[soundUrl].title;
+        const baseCreators = generateSimulatedCreators(targetCount, soundTitle);
+        
+        // Simulate realistic processing time
+        const processingTime = 1500 + Math.random() * 2000; // 1.5-3.5 seconds
+        await new Promise(resolve => setTimeout(resolve, processingTime));
+        
+        return baseCreators;
+    }
+
+    // Start analysis process
+    startAnalysisBtn.addEventListener('click', async function() {
+        const soundUrls = Object.keys(soundsData);
+        const targetCount = parseInt(creatorLimitSelect.value);
+        
+        if (soundUrls.length === 0) {
+            showStatus('No sounds to analyze', 'error');
+            return;
+        }
+        
+        startAnalysisBtn.disabled = true;
+        startAnalysisBtn.innerHTML = '<span class="spinner"></span>Analyzing...';
+        analysisProgress.style.display = 'block';
+        
+        try {
+            for (let i = 0; i < soundUrls.length; i++) {
+                const url = soundUrls[i];
+                const soundTitle = soundsData[url].title;
+                
+                // Update progress
+                const progress = (i / soundUrls.length) * 100;
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `Processing "${soundTitle}" (${i + 1}/${soundUrls.length})...`;
+                
+                // Simulate collection
+                const creators = await simulateCreatorCollection(url, targetCount);
+                soundsData[url].usernames = creators;
+                
+                progressText.textContent = `✅ Collected ${creators.length} creators from "${soundTitle}"`;
+                updateSoundsDisplay(); // Update the display to show collected counts
+                
+                // Small delay to show the success message
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // Complete progress
+            progressFill.style.width = '100%';
+            progressText.textContent = '🎯 Analyzing creator overlaps...';
+            
+            // Small delay for the final step
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Analyze overlaps
+            analyzeCreatorOverlaps();
+            
+            // Display results
+            displayResults();
+            
+            const totalCreators = Object.keys(analysisResults.creatorCounts || {}).length;
+            const overlappingCreators = analysisResults.sortedCreators.length;
+            
+            showStatus(`🎉 Analysis complete! Found ${totalCreators} unique creators with ${overlappingCreators} appearing across multiple sounds.`, 'success');
+            
+        } catch (error) {
+            console.error('Analysis error:', error);
+            showStatus(`❌ Analysis error: ${error.message}`, 'error');
+        } finally {
+            startAnalysisBtn.disabled = false;
+            startAnalysisBtn.textContent = '🚀 Start Analysis';
+            setTimeout(() => {
+                analysisProgress.style.display = 'none';
+            }, 2000);
+        }
+    });
+
+    // Analyze creator overlaps
+    function analyzeCreatorOverlaps() {
+        const creatorCounts = {};
+        const creatorSounds = {};
+        
+        // Count appearances across sounds
+        Object.entries(soundsData).forEach(([soundUrl, data]) => {
+            data.usernames.forEach(username => {
+                if (!creatorCounts[username]) {
+                    creatorCounts[username] = 0;
+                    creatorSounds[username] = [];
+                }
+                creatorCounts[username]++;
+                creatorSounds[username].push(data.title);
+            });
+        });
+        
+        // Sort by overlap count, then alphabetically
+        const sortedCreators = Object.entries(creatorCounts)
+            .sort(([a, countA], [b, countB]) => {
+                if (countB !== countA) return countB - countA; // Sort by count descending
+                return a.localeCompare(b); // Then alphabetically
+            })
+            .filter(([,count]) => count >= 2); // Only show creators appearing in multiple sounds
+        
+        analysisResults = {
+            creatorCounts,
+            creatorSounds,
+            sortedCreators
+        };
+    }
+
+    // Display analysis results
+    function displayResults() {
+        updateSoundsOverview();
+        updateCreatorsTable();
+        resultsSection.style.display = 'block';
+        
+        // Smooth scroll to results
+        setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+    }
+
+    function updateSoundsOverview() {
+        soundsList.innerHTML = Object.entries(soundsData).map(([url, data]) => {
+            const creatorCount = data.usernames.length;
+            return `
+                <div class="sound-item">
+                    <div class="sound-title">${escapeHtml(data.title)}</div>
+                    <div class="sound-url">${escapeHtml(url)}</div>
+                    <div class="sound-stats">
+                        <span><strong>${creatorCount.toLocaleString()}</strong> creators</span>
+                        <span class="badge ${creatorCount > 150 ? 'high' : creatorCount > 50 ? 'medium' : ''}">${creatorCount > 150 ? 'High' : creatorCount > 50 ? 'Medium' : 'Low'} volume</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateCreatorsTable() {
+        const minSounds = parseInt(minSoundsSelect.value);
+        const filteredCreators = analysisResults.sortedCreators.filter(([username, count]) => count >= minSounds);
+        
+        if (filteredCreators.length === 0) {
+            creatorsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">No creators found matching the minimum sound requirement</td></tr>';
+            return;
+        }
+        
+        const totalSounds = Object.keys(soundsData).length;
+        
+        creatorsTableBody.innerHTML = filteredCreators.slice(0, 100).map(([username, count], index) => {
+            const sounds = analysisResults.creatorSounds[username] || [];
+            const overlapPercent = Math.round((count / totalSounds) * 100);
+            const badgeClass = count >= 4 ? 'high' : count >= 3 ? 'medium' : '';
+            
+            return `
+                <tr>
+                    <td><strong>${index + 1}</strong></td>
+                    <td class="creator-name">@${escapeHtml(username)}</td>
+                    <td><span class="badge ${badgeClass}">${count}</span></td>
+                    <td><strong>${overlapPercent}%</strong></td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sounds.map(s => escapeHtml(s)).join(', ')}">${sounds.map(s => escapeHtml(s)).join(', ')}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Filter creators when selection changes
+    minSoundsSelect.addEventListener('change', updateCreatorsTable);
+
+    // Export functions
+    exportCSVBtn.addEventListener('click', function() {
+        if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
+            showStatus('No data to export. Please run analysis first.', 'error');
+            return;
+        }
+        
+        const headers = ['Rank', 'Username', 'Sound Count', 'Overlap Percentage', 'Sounds Appeared In'];
+        const totalSounds = Object.keys(soundsData).length;
+        
+        const rows = analysisResults.sortedCreators.map(([username, count], index) => {
+            const sounds = analysisResults.creatorSounds[username] || [];
+            const overlapPercent = Math.round((count / totalSounds) * 100);
+            
+            return [
+                index + 1,
+                username,
+                count,
+                `${overlapPercent}%`,
+                `"${sounds.join(', ')}"`
+            ];
+        });
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        downloadFile(csvContent, 'sound-analysis-creators.csv', 'text/csv');
+        showStatus('✅ CSV exported successfully!', 'success');
+    });
+
+    exportJSONBtn.addEventListener('click', function() {
+        if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
+            showStatus('No data to export. Please run analysis first.', 'error');
+            return;
+        }
+        
+        const exportData = {
+            metadata: {
+                exportDate: new Date().toISOString(),
+                totalSounds: Object.keys(soundsData).length,
+                totalCreators: Object.keys(analysisResults.creatorCounts).length,
+                overlappingCreators: analysisResults.sortedCreators.length,
+                generatedBy: 'Sound Analysis Tool'
+            },
+            sounds: Object.entries(soundsData).map(([url, data]) => ({
+                url: url,
+                title: data.title,
+                creatorCount: data.usernames.length,
+                creators: data.usernames
+            })),
+            creators: analysisResults.sortedCreators.map(([username, count], index) => {
+                const sounds = analysisResults.creatorSounds[username] || [];
+                const overlapPercent = Math.round((count / Object.keys(soundsData).length) * 100);
+                
+                return {
+                    rank: index + 1,
+                    username: username,
+                    soundCount: count,
+                    overlapPercentage: overlapPercent,
+                    soundsAppearedIn: sounds
+                };
+            })
+        };
+        
+        downloadFile(JSON.stringify(exportData, null, 2), 'sound-analysis-complete.json', 'application/json');
+        showStatus('✅ Complete JSON data exported successfully!', 'success');
+    });
+
+    exportTop50Btn.addEventListener('click', function() {
+        if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
+            showStatus('No data to export. Please run analysis first.', 'error');
+            return;
+        }
+        
+        const top50 = analysisResults.sortedCreators.slice(0, 50);
+        const totalSounds = Object.keys(soundsData).length;
+        
+        const exportData = {
+            metadata: {
+                exportDate: new Date().toISOString(),
+                description: 'Top 50 creators with highest sound overlap',
+                totalSoundsAnalyzed: totalSounds,
+                generatedBy: 'Sound Analysis Tool'
+            },
+            topCreators: top50.map(([username, count], index) => {
+                const sounds = analysisResults.creatorSounds[username] || [];
+                const overlapPercent = Math.round((count / totalSounds) * 100);
+                
+                return {
+                    rank: index + 1,
+                    username: username,
+                    soundCount: count,
+                    overlapPercentage: overlapPercent,
+                    reliabilityScore: calculateReliabilityScore(count, totalSounds),
+                    soundsAppearedIn: sounds,
+                    recommendedFor: count >= 4 ? 'High-priority campaigns' : count >= 3 ? 'Medium-priority campaigns' : 'Testing campaigns'
+                };
+            })
+        };
+        
+        downloadFile(JSON.stringify(exportData, null, 2), 'top-50-creators.json', 'application/json');
+        showStatus('✅ Top 50 creators exported successfully!', 'success');
+    });
+
+    // Utility functions
+    function calculateReliabilityScore(soundCount, totalSounds) {
+        const baseScore = (soundCount / totalSounds) * 100;
+        if (baseScore >= 80) return 'Excellent';
+        if (baseScore >= 60) return 'Very Good';
+        if (baseScore >= 40) return 'Good';
+        if (baseScore >= 25) return 'Fair';
+        return 'Low';
+    }
+
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initialize the application
+    updateSoundsDisplay();
+    
+    // Add some example data on page load for demo purposes
+    setTimeout(() => {
+        if (Object.keys(soundsData).length === 0) {
+            soundUrlsTextarea.value = `https://www.tiktok.com/music/Dreams-2004-Remaster-6705099754369452034
+https://www.tiktok.com/music/Stay-The-Kid-LAROI-Justin-Bieber-6977356686334073857
+https://www.tiktok.com/music/Industry-Baby-6991331264001025794`;
+        }
+    }, 1000);
+});
