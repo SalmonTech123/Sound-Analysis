@@ -602,6 +602,12 @@ creator_name_4
         startAnalysisBtn.disabled = false;
         startAnalysisBtn.textContent = `🎯 Analyze Extension Data (${soundData.actualCount} creators)`;
         
+        // Show extension notice
+        const extensionNotice = document.getElementById('extensionNotice');
+        const extensionDataInfo = document.getElementById('extensionDataInfo');
+        extensionDataInfo.textContent = `${soundData.actualCount} creators collected from "${soundData.title}"`;
+        extensionNotice.style.display = 'block';
+        
         // Show success message
         showStatus(`🚀 Received data from extension: ${soundData.actualCount} creators from "${soundData.title}"`, 'success');
         
