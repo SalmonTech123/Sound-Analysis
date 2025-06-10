@@ -382,7 +382,7 @@
 
         <!-- Demo Note -->
         <div class="demo-note">
-            <strong>📝 Demo Mode:</strong> This version uses simulated data for demonstration. In the full version, this would connect to actual TikTok data sources.
+            <strong>🔄 Data Collection Options:</strong> You can use simulated data for testing, or manually input real creator lists you've collected from TikTok.
         </div>
 
         <div id="status" class="status"></div>
@@ -414,6 +414,25 @@ Paste your TikTok sound URLs here..."></textarea>
                 </div>
                 
                 <button id="addSounds" class="btn">📝 Add Sounds to Analysis</button>
+                
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e1e8ed;">
+                    <h4 style="color: #333; margin-bottom: 10px; font-size: 14px;">🔧 Data Collection Mode:</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="dataMode" value="simulated" checked style="margin: 0;">
+                            <span style="font-size: 13px;">Simulated Data (Demo)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="radio" name="dataMode" value="manual" style="margin: 0;">
+                            <span style="font-size: 13px;">Manual Input (Real Data)</span>
+                        </label>
+                    </div>
+                    
+                    <div id="manualDataSection" style="display: none;">
+                        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Paste creator lists you've collected (one username per line, with or without @):</p>
+                        <button id="addManualData" class="btn secondary" style="font-size: 14px; padding: 8px 16px;">📋 Add Creator Lists Manually</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Analysis Section -->
@@ -473,7 +492,6 @@ Paste your TikTok sound URLs here..."></textarea>
                 
                 <div class="export-buttons">
                     <button id="exportCSV" class="btn secondary">📊 Export CSV</button>
-                    <button id="exportJSON" class="btn secondary">📄 Export JSON</button>
                     <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators</button>
                 </div>
             </div>
