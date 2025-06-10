@@ -19,16 +19,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportTop50Btn = document.getElementById('exportTop50');
     
     // Manual data elements
-    const manualDataSection = document.getElementById('manualDataSection');
     const addManualDataBtn = document.getElementById('addManualData');
 
     // Data storage
     let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
     let analysisResults = {}; // Creator overlap analysis
-    let dataMode = 'simulated'; // 'simulated' or 'manual'
-    
-    // Check for extension data on page load
-    checkForExtensionData();
 
     // Utility functions
     function showStatus(message, type = 'info') {
@@ -255,7 +250,7 @@ username_here"
             
             // Enable analysis if we have data
             startAnalysisBtn.disabled = false;
-            startAnalysisBtn.textContent = `🎯 Analyze Manual Data (${totalCreators} creators)`;
+            startAnalysisBtn.textContent = `🎯 Analyze Creator Data (${totalCreators} creators)`;
         });
         
         // Handle cancel
@@ -292,76 +287,31 @@ username_here"
             startAnalysisBtn.textContent = `🚀 Analyze ${soundCount} Sound(s)`;
         } else {
             soundsAddedDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No sounds added yet</p>';
+            addManualDataBtn.disabled = true;
             startAnalysisBtn.disabled = true;
             startAnalysisBtn.textContent = '🚀 Start Analysis';
         }
     }
 
-    // Generate simulated creator data (for demo purposes)
-    function generateSimulatedCreators(count, soundTitle) {
-        const creators = [];
-        const soundHash = simpleHash(soundTitle);
-        
-        // Create some common creators across sounds for realistic overlap
-        const commonCreators = [
-            'musiclover_2024', 'tiktok_dancer', 'viral_vibes', 'sound_creator', 'music_maven',
-            'beat_drops', 'melody_maker', 'rhythm_king', 'audio_artist', 'track_master',
-            'song_specialist', 'music_influencer', 'sound_sage', 'beat_builder', 'tune_titan'
-        ];
-        
-        // Add some common creators (for overlap simulation)
-        const numCommon = Math.min(15, Math.floor(count * 0.15)); // 15% overlap
-        for (let i = 0; i < numCommon; i++) {
-            creators.push(commonCreators[i % commonCreators.length]);
-        }
-        
-        // Generate unique creators for this sound
-        for (let i = numCommon; i < count; i++) {
-            creators.push(`creator_${soundHash}_${i - numCommon}`);
-        }
-        
-        // Shuffle the array to make it more realistic
-        return shuffleArray(creators);
-    }
-
-    function simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
-        }
-        return Math.abs(hash) % 1000;
-    }
-
-    function shuffleArray(array) {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
-    // Simulate creator collection process
-    async function simulateCreatorCollection(soundUrl, targetCount) {
-        const soundTitle = soundsData[soundUrl].title;
-        const baseCreators = generateSimulatedCreators(targetCount, soundTitle);
-        
-        // Simulate realistic processing time
-        const processingTime = 1500 + Math.random() * 2000; // 1.5-3.5 seconds
-        await new Promise(resolve => setTimeout(resolve, processingTime));
-        
-        return baseCreators;
-    }
+    // Manual data entry
+    addManualDataBtn.addEventListener('click', function() {
+        console.log('Manual data button clicked'); // Debug log
+        openManualDataModal();
+    });
 
     // Start analysis process
     startAnalysisBtn.addEventListener('click', async function() {
         const soundUrls = Object.keys(soundsData);
-        const targetCount = parseInt(creatorLimitSelect.value);
         
         if (soundUrls.length === 0) {
             showStatus('No sounds to analyze', 'error');
+            return;
+        }
+        
+        // Check if all sounds have creator data
+        const soundsWithoutData = soundUrls.filter(url => !soundsData[url].usernames || soundsData[url].usernames.length === 0);
+        if (soundsWithoutData.length > 0) {
+            showStatus('Please add creator data for all sounds before analyzing', 'error');
             return;
         }
         
@@ -370,41 +320,18 @@ username_here"
         analysisProgress.style.display = 'block';
         
         try {
-            for (let i = 0; i < soundUrls.length; i++) {
-                const url = soundUrls[i];
-                const soundTitle = soundsData[url].title;
-                
-                // Update progress
-                const progress = (i / soundUrls.length) * 100;
-                progressFill.style.width = `${progress}%`;
-                progressText.textContent = `Processing "${soundTitle}" (${i + 1}/${soundUrls.length})...`;
-                
-                // Skip if we already have manual data
-                if (dataMode === 'manual' && soundsData[url].usernames.length > 0) {
-                    progressText.textContent = `✅ Using manual data for "${soundTitle}" (${soundsData[url].usernames.length} creators)`;
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    continue;
-                }
-                
-                // Only simulate if in simulated mode and no existing data
-                if (dataMode === 'simulated') {
-                    const creators = await simulateCreatorCollection(url, targetCount);
-                    soundsData[url].usernames = creators;
-                    progressText.textContent = `✅ Collected ${creators.length} creators from "${soundTitle}"`;
-                    updateSoundsDisplay();
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-            }
-            
-            // Complete progress
-            progressFill.style.width = '100%';
+            progressFill.style.width = '50%';
             progressText.textContent = '🎯 Analyzing creator overlaps...';
             
-            // Small delay for the final step
+            // Small delay for visual feedback
             await new Promise(resolve => setTimeout(resolve, 800));
             
             // Analyze overlaps
             analyzeCreatorOverlaps();
+            
+            // Complete progress
+            progressFill.style.width = '100%';
+            progressText.textContent = '✅ Analysis complete!';
             
             // Display results
             displayResults();
@@ -614,119 +541,16 @@ username_here"
         return div.innerHTML;
     }
 
+    function simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash) % 1000;
+    }
+
     // Initialize the application
     updateSoundsDisplay();
-    
-    // Extension communication
-    function checkForExtensionData() {
-        console.log('Checking for extension data...'); // Debug log
-        
-        // Check URL parameters for extension data
-        const urlParams = new URLSearchParams(window.location.search);
-        const extensionData = urlParams.get('extensionData');
-        
-        console.log('URL params:', window.location.search); // Debug log
-        console.log('Extension data param:', extensionData); // Debug log
-        
-        if (extensionData) {
-            try {
-                const data = JSON.parse(decodeURIComponent(extensionData));
-                console.log('Parsed extension data:', data); // Debug log
-                
-                if (data.action === 'receiveCollectedData' && data.soundData) {
-                    handleExtensionData(data.soundData);
-                    // Clean URL
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            } catch (error) {
-                console.error('Error parsing extension data:', error);
-                showStatus('Error receiving extension data. Try copying data instead.', 'error');
-            }
-        }
-        
-        // Listen for direct messages from extension
-        window.addEventListener('message', function(event) {
-            console.log('Received window message:', event.data); // Debug log
-            
-            if (event.data && event.data.action === 'receiveCollectedData') {
-                console.log('Processing extension message...'); // Debug log
-                handleExtensionData(event.data.soundData);
-            }
-        });
-        
-        // Listen for Chrome extension messages
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-                console.log('Received Chrome message:', request); // Debug log
-                
-                if (request.action === 'receiveCollectedData') {
-                    handleExtensionData(request.soundData);
-                    sendResponse({success: true});
-                }
-                return true;
-            });
-        }
-    }
-    
-    function handleExtensionData(soundData) {
-        console.log('Handling extension data:', soundData); // Debug log
-        
-        // Switch to manual mode
-        dataMode = 'manual';
-        const manualRadio = document.querySelector('input[name="dataMode"][value="manual"]');
-        if (manualRadio) {
-            manualRadio.checked = true;
-            manualDataSection.style.display = 'block';
-        }
-        
-        // Add the sound to our data
-        soundsData[soundData.url] = {
-            title: soundData.title,
-            usernames: soundData.usernames
-        };
-        
-        console.log('Updated sounds data:', soundsData); // Debug log
-        
-        updateSoundsDisplay();
-        startAnalysisBtn.disabled = false;
-        startAnalysisBtn.textContent = `🎯 Analyze Extension Data (${soundData.actualCount} creators)`;
-        
-        // Show extension notice
-        const extensionNotice = document.getElementById('extensionNotice');
-        const extensionDataInfo = document.getElementById('extensionDataInfo');
-        if (extensionNotice && extensionDataInfo) {
-            extensionDataInfo.textContent = `${soundData.actualCount} creators collected from "${soundData.title}"`;
-            extensionNotice.style.display = 'block';
-        }
-        
-        // Show success message
-        showStatus(`🚀 Received data from extension: ${soundData.actualCount} creators from "${soundData.title}"`, 'success');
-        
-        // Scroll to the analysis section
-        document.querySelector('.main-content').scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    // Add some example data on page load for demo purposes
-    setTimeout(() => {
-        if (Object.keys(soundsData).length === 0) {
-            soundUrlsTextarea.value = `https://www.tiktok.com/music/Dreams-2004-Remaster-6705099754369452034
-https://www.tiktok.com/music/Stay-The-Kid-LAROI-Justin-Bieber-6977356686334073857
-https://www.tiktok.com/music/Industry-Baby-6991331264001025794`;
-        }
-    }, 1000);
-    
-    // Debug function to test extension data reception (remove after testing)
-    window.testExtensionData = function() {
-        const testData = {
-            url: 'https://www.tiktok.com/music/Test-Song-123456789',
-            title: 'Test Song',
-            usernames: ['test_user1', 'test_user2', 'test_user3'],
-            collectedAt: new Date().toISOString(),
-            targetCount: 3,
-            actualCount: 3
-        };
-        
-        console.log('Testing with fake data:', testData);
-        handleExtensionData(testData);
-    };
 });
