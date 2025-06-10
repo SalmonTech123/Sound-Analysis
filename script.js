@@ -290,12 +290,6 @@ username_here"
         }
     }
 
-    // Manual data entry
-    addManualDataBtn.addEventListener('click', function() {
-        console.log('Manual data button clicked'); // Debug log
-        openManualDataModal();
-    });
-
     // Start analysis process
     startAnalysisBtn.addEventListener('click', async function() {
         const soundUrls = Object.keys(soundsData);
