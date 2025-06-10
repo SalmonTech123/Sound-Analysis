@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
     let analysisResults = {}; // Creator overlap analysis
     let dataMode = 'simulated'; // 'simulated' or 'manual'
+    
+    // Check for extension data on page load
+    checkForExtensionData();
 
     // Utility functions
     function showStatus(message, type = 'info') {
@@ -555,6 +558,56 @@ creator_name_4
 
     // Initialize the application
     updateSoundsDisplay();
+    
+    // Extension communication
+    function checkForExtensionData() {
+        // Check URL parameters for extension data
+        const urlParams = new URLSearchParams(window.location.search);
+        const extensionData = urlParams.get('extensionData');
+        
+        if (extensionData) {
+            try {
+                const data = JSON.parse(decodeURIComponent(extensionData));
+                if (data.action === 'receiveCollectedData' && data.soundData) {
+                    handleExtensionData(data.soundData);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (error) {
+                console.error('Error parsing extension data:', error);
+            }
+        }
+        
+        // Listen for direct messages from extension
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'receiveCollectedData') {
+                handleExtensionData(event.data.soundData);
+            }
+        });
+    }
+    
+    function handleExtensionData(soundData) {
+        // Switch to manual mode
+        dataMode = 'manual';
+        document.querySelector('input[name="dataMode"][value="manual"]').checked = true;
+        manualDataSection.style.display = 'block';
+        
+        // Add the sound to our data
+        soundsData[soundData.url] = {
+            title: soundData.title,
+            usernames: soundData.usernames
+        };
+        
+        updateSoundsDisplay();
+        startAnalysisBtn.disabled = false;
+        startAnalysisBtn.textContent = `🎯 Analyze Extension Data (${soundData.actualCount} creators)`;
+        
+        // Show success message
+        showStatus(`🚀 Received data from extension: ${soundData.actualCount} creators from "${soundData.title}"`, 'success');
+        
+        // Scroll to the analysis section
+        document.querySelector('.main-content').scrollIntoView({ behavior: 'smooth' });
+    }
     
     // Add some example data on page load for demo purposes
     setTimeout(() => {
