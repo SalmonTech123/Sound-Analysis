@@ -120,10 +120,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Manual data entry
     addManualDataBtn.addEventListener('click', function() {
+        console.log('Manual data button clicked'); // Debug log
         openManualDataModal();
     });
     
     function openManualDataModal() {
+        console.log('Opening manual data modal...'); // Debug log
+        console.log('Current sounds data:', soundsData); // Debug log
+        
         // Check if we have sounds added first
         if (Object.keys(soundsData).length === 0) {
             showStatus('Please add TikTok sound URLs first before entering creator data', 'error');
@@ -615,13 +619,20 @@ username_here"
     
     // Extension communication
     function checkForExtensionData() {
+        console.log('Checking for extension data...'); // Debug log
+        
         // Check URL parameters for extension data
         const urlParams = new URLSearchParams(window.location.search);
         const extensionData = urlParams.get('extensionData');
         
+        console.log('URL params:', window.location.search); // Debug log
+        console.log('Extension data param:', extensionData); // Debug log
+        
         if (extensionData) {
             try {
                 const data = JSON.parse(decodeURIComponent(extensionData));
+                console.log('Parsed extension data:', data); // Debug log
+                
                 if (data.action === 'receiveCollectedData' && data.soundData) {
                     handleExtensionData(data.soundData);
                     // Clean URL
@@ -629,28 +640,52 @@ username_here"
                 }
             } catch (error) {
                 console.error('Error parsing extension data:', error);
+                showStatus('Error receiving extension data. Try copying data instead.', 'error');
             }
         }
         
         // Listen for direct messages from extension
         window.addEventListener('message', function(event) {
+            console.log('Received window message:', event.data); // Debug log
+            
             if (event.data && event.data.action === 'receiveCollectedData') {
+                console.log('Processing extension message...'); // Debug log
                 handleExtensionData(event.data.soundData);
             }
         });
+        
+        // Listen for Chrome extension messages
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+                console.log('Received Chrome message:', request); // Debug log
+                
+                if (request.action === 'receiveCollectedData') {
+                    handleExtensionData(request.soundData);
+                    sendResponse({success: true});
+                }
+                return true;
+            });
+        }
     }
     
     function handleExtensionData(soundData) {
+        console.log('Handling extension data:', soundData); // Debug log
+        
         // Switch to manual mode
         dataMode = 'manual';
-        document.querySelector('input[name="dataMode"][value="manual"]').checked = true;
-        manualDataSection.style.display = 'block';
+        const manualRadio = document.querySelector('input[name="dataMode"][value="manual"]');
+        if (manualRadio) {
+            manualRadio.checked = true;
+            manualDataSection.style.display = 'block';
+        }
         
         // Add the sound to our data
         soundsData[soundData.url] = {
             title: soundData.title,
             usernames: soundData.usernames
         };
+        
+        console.log('Updated sounds data:', soundsData); // Debug log
         
         updateSoundsDisplay();
         startAnalysisBtn.disabled = false;
@@ -659,8 +694,10 @@ username_here"
         // Show extension notice
         const extensionNotice = document.getElementById('extensionNotice');
         const extensionDataInfo = document.getElementById('extensionDataInfo');
-        extensionDataInfo.textContent = `${soundData.actualCount} creators collected from "${soundData.title}"`;
-        extensionNotice.style.display = 'block';
+        if (extensionNotice && extensionDataInfo) {
+            extensionDataInfo.textContent = `${soundData.actualCount} creators collected from "${soundData.title}"`;
+            extensionNotice.style.display = 'block';
+        }
         
         // Show success message
         showStatus(`🚀 Received data from extension: ${soundData.actualCount} creators from "${soundData.title}"`, 'success');
@@ -677,4 +714,19 @@ https://www.tiktok.com/music/Stay-The-Kid-LAROI-Justin-Bieber-697735668633407385
 https://www.tiktok.com/music/Industry-Baby-6991331264001025794`;
         }
     }, 1000);
+    
+    // Debug function to test extension data reception (remove after testing)
+    window.testExtensionData = function() {
+        const testData = {
+            url: 'https://www.tiktok.com/music/Test-Song-123456789',
+            title: 'Test Song',
+            usernames: ['test_user1', 'test_user2', 'test_user3'],
+            collectedAt: new Date().toISOString(),
+            targetCount: 3,
+            actualCount: 3
+        };
+        
+        console.log('Testing with fake data:', testData);
+        handleExtensionData(testData);
+    };
 });
