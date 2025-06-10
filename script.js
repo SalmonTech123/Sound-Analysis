@@ -16,12 +16,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const minSoundsSelect = document.getElementById('minSounds');
     const creatorsTableBody = document.getElementById('creatorsTableBody');
     const exportCSVBtn = document.getElementById('exportCSV');
-    const exportJSONBtn = document.getElementById('exportJSON');
     const exportTop50Btn = document.getElementById('exportTop50');
+    
+    // Manual data elements
+    const manualDataSection = document.getElementById('manualDataSection');
+    const addManualDataBtn = document.getElementById('addManualData');
 
     // Data storage
     let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
     let analysisResults = {}; // Creator overlap analysis
+    let dataMode = 'simulated'; // 'simulated' or 'manual'
 
     // Utility functions
     function showStatus(message, type = 'info') {
@@ -101,6 +105,110 @@ document.addEventListener('DOMContentLoaded', function() {
             showStatus(message, 'error');
         }
     });
+    
+    // Handle data mode switching
+    document.querySelectorAll('input[name="dataMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            dataMode = this.value;
+            manualDataSection.style.display = dataMode === 'manual' ? 'block' : 'none';
+        });
+    });
+    
+    // Manual data entry
+    addManualDataBtn.addEventListener('click', function() {
+        openManualDataModal();
+    });
+    
+    function openManualDataModal() {
+        // Create modal for manual data entry
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+            align-items: center; justify-content: center; padding: 20px;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white; border-radius: 20px; padding: 30px; 
+            max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto;
+        `;
+        
+        modalContent.innerHTML = `
+            <h3 style="margin-bottom: 20px; color: #333;">📋 Manual Creator Data Entry</h3>
+            <p style="color: #666; margin-bottom: 15px;">For each sound you've added, paste the creators you've found (one per line):</p>
+            
+            ${Object.entries(soundsData).map(([url, data]) => `
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e1e8ed; border-radius: 8px;">
+                    <h4 style="margin-bottom: 10px; color: #333;">${data.title}</h4>
+                    <textarea 
+                        id="creators-${simpleHash(url)}" 
+                        placeholder="username1
+username2  
+@username3
+creator_name_4
+..."
+                        style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px;"
+                    ></textarea>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">
+                        You can include or exclude @ symbols - they'll be normalized automatically
+                    </div>
+                </div>
+            `).join('')}
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="saveManualData" style="flex: 1; background: #667eea; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                    💾 Save Creator Data
+                </button>
+                <button id="cancelManualData" style="flex: 1; background: #ccc; color: #333; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                    ❌ Cancel
+                </button>
+            </div>
+        `;
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Handle save
+        document.getElementById('saveManualData').addEventListener('click', function() {
+            let totalCreators = 0;
+            
+            Object.entries(soundsData).forEach(([url, data]) => {
+                const textarea = document.getElementById(`creators-${simpleHash(url)}`);
+                if (textarea) {
+                    const creators = textarea.value
+                        .split('\n')
+                        .map(name => name.trim().replace('@', ''))
+                        .filter(name => name.length > 0);
+                    
+                    soundsData[url].usernames = creators;
+                    totalCreators += creators.length;
+                }
+            });
+            
+            updateSoundsDisplay();
+            showStatus(`✅ Saved ${totalCreators} creators across ${Object.keys(soundsData).length} sounds!`, 'success');
+            document.body.removeChild(modal);
+            
+            // Enable analysis if we have data
+            if (totalCreators > 0) {
+                startAnalysisBtn.disabled = false;
+                startAnalysisBtn.textContent = `🎯 Analyze Manual Data`;
+            }
+        });
+        
+        // Handle cancel
+        document.getElementById('cancelManualData').addEventListener('click', function() {
+            document.body.removeChild(modal);
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
 
     // Update sounds display
     function updateSoundsDisplay() {
@@ -210,15 +318,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 progressFill.style.width = `${progress}%`;
                 progressText.textContent = `Processing "${soundTitle}" (${i + 1}/${soundUrls.length})...`;
                 
-                // Simulate collection
-                const creators = await simulateCreatorCollection(url, targetCount);
-                soundsData[url].usernames = creators;
+                // Skip if we already have manual data
+                if (dataMode === 'manual' && soundsData[url].usernames.length > 0) {
+                    progressText.textContent = `✅ Using manual data for "${soundTitle}" (${soundsData[url].usernames.length} creators)`;
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    continue;
+                }
                 
-                progressText.textContent = `✅ Collected ${creators.length} creators from "${soundTitle}"`;
-                updateSoundsDisplay(); // Update the display to show collected counts
-                
-                // Small delay to show the success message
-                await new Promise(resolve => setTimeout(resolve, 300));
+                // Only simulate if in simulated mode and no existing data
+                if (dataMode === 'simulated') {
+                    const creators = await simulateCreatorCollection(url, targetCount);
+                    soundsData[url].usernames = creators;
+                    progressText.textContent = `✅ Collected ${creators.length} creators from "${soundTitle}"`;
+                    updateSoundsDisplay();
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
             }
             
             // Complete progress
@@ -374,44 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showStatus('✅ CSV exported successfully!', 'success');
     });
 
-    exportJSONBtn.addEventListener('click', function() {
-        if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
-            showStatus('No data to export. Please run analysis first.', 'error');
-            return;
-        }
-        
-        const exportData = {
-            metadata: {
-                exportDate: new Date().toISOString(),
-                totalSounds: Object.keys(soundsData).length,
-                totalCreators: Object.keys(analysisResults.creatorCounts).length,
-                overlappingCreators: analysisResults.sortedCreators.length,
-                generatedBy: 'Sound Analysis Tool'
-            },
-            sounds: Object.entries(soundsData).map(([url, data]) => ({
-                url: url,
-                title: data.title,
-                creatorCount: data.usernames.length,
-                creators: data.usernames
-            })),
-            creators: analysisResults.sortedCreators.map(([username, count], index) => {
-                const sounds = analysisResults.creatorSounds[username] || [];
-                const overlapPercent = Math.round((count / Object.keys(soundsData).length) * 100);
-                
-                return {
-                    rank: index + 1,
-                    username: username,
-                    soundCount: count,
-                    overlapPercentage: overlapPercent,
-                    soundsAppearedIn: sounds
-                };
-            })
-        };
-        
-        downloadFile(JSON.stringify(exportData, null, 2), 'sound-analysis-complete.json', 'application/json');
-        showStatus('✅ Complete JSON data exported successfully!', 'success');
-    });
-
     exportTop50Btn.addEventListener('click', function() {
         if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
             showStatus('No data to export. Please run analysis first.', 'error');
@@ -445,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         downloadFile(JSON.stringify(exportData, null, 2), 'top-50-creators.json', 'application/json');
-        showStatus('✅ Top 50 creators exported successfully!', 'success');
+        showStatus('✅ Top 50 creators exported as JSON!', 'success');
     });
 
     // Utility functions
