@@ -413,12 +413,17 @@ viral_creator"
             return `
                 <tr>
                     <td><strong>${index + 1}</strong></td>
-                    <td class="creator-name">@${escapeHtml(username)}</td>
+                    <td class="creator-name">
+                        <a href="https://www.tiktok.com/@${escapeHtml(username)}" target="_blank" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                            @${escapeHtml(username)} ↗️
+                        </a>
+                    </td>
                     <td><span class="badge ${badgeClass}">${count}</span></td>
                     <td><strong>${overlapPercent}%</strong></td>
                     <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sounds.map(s => escapeHtml(s)).join(', ')}">${sounds.map(s => escapeHtml(s)).join(', ')}</td>
                 </tr>
             `;
+        }).join('');
         }).join('');
     }
 
