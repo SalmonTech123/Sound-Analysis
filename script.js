@@ -17,9 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const creatorsTableBody = document.getElementById('creatorsTableBody');
     const exportCSVBtn = document.getElementById('exportCSV');
     const exportTop50Btn = document.getElementById('exportTop50');
-    
-    // Manual data elements
-    const addManualDataBtn = document.getElementById('addManualData');
 
     // Data storage
     let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
