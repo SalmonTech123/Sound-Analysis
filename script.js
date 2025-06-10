@@ -50,8 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Decode and clean up the title
                 let title = decodeURIComponent(match[1]);
                 title = title.replace(/-/g, ' '); // Replace hyphens with spaces
+                title = title.replace(/\s+\d+$/, ''); // Remove trailing numbers (like song IDs)
                 title = title.replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
-                return title;
+                return title.trim();
             }
         } catch (error) {
             console.error('Error extracting sound title:', error);
@@ -123,6 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function openManualDataModal() {
+        // Check if we have sounds added first
+        if (Object.keys(soundsData).length === 0) {
+            showStatus('Please add TikTok sound URLs first before entering creator data', 'error');
+            return;
+        }
+        
         // Create modal for manual data entry
         const modal = document.createElement('div');
         modal.style.cssText = `
@@ -134,36 +141,59 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalContent = document.createElement('div');
         modalContent.style.cssText = `
             background: white; border-radius: 20px; padding: 30px; 
-            max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto;
+            max-width: 700px; width: 100%; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         `;
         
         modalContent.innerHTML = `
-            <h3 style="margin-bottom: 20px; color: #333;">📋 Manual Creator Data Entry</h3>
-            <p style="color: #666; margin-bottom: 15px;">For each sound you've added, paste the creators you've found (one per line):</p>
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h3 style="margin-bottom: 10px; color: #333; font-size: 20px;">📋 Manual Creator Data Entry</h3>
+                <p style="color: #666; font-size: 14px;">Enter the creators you've found for each sound below</p>
+            </div>
             
-            ${Object.entries(soundsData).map(([url, data]) => `
-                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e1e8ed; border-radius: 8px;">
-                    <h4 style="margin-bottom: 10px; color: #333;">${data.title}</h4>
+            <div style="background: #e3f2fd; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                <h4 style="color: #1565c0; margin-bottom: 8px; font-size: 14px;">💡 Instructions:</h4>
+                <ul style="color: #1976d2; font-size: 12px; margin-left: 15px; line-height: 1.5;">
+                    <li>Paste one creator username per line</li>
+                    <li>You can include or exclude @ symbols (both "username" and "@username" work)</li>
+                    <li>Leave empty if you haven't collected data for a sound yet</li>
+                    <li>Example format:<br>
+                        <code style="background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px;">
+                        musiclover2024<br>@creator_name<br>tiktok_user
+                        </code>
+                    </li>
+                </ul>
+            </div>
+            
+            ${Object.entries(soundsData).map(([url, data], index) => `
+                <div style="margin-bottom: 25px; padding: 20px; border: 2px solid #e1e8ed; border-radius: 12px; background: #fafbfc;">
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <span style="background: #667eea; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">${index + 1}</span>
+                        <h4 style="margin: 0; color: #333; font-size: 16px;">${escapeHtml(data.title)}</h4>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-bottom: 10px; word-break: break-all;">${escapeHtml(url)}</div>
                     <textarea 
                         id="creators-${simpleHash(url)}" 
-                        placeholder="username1
-username2  
-@username3
-creator_name_4
-..."
-                        style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px;"
+                        placeholder="Paste creator usernames here (one per line):
+
+musiclover2024
+@viral_creator
+tiktok_dancer
+username_here"
+                        style="width: 100%; height: 120px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: white;"
                     ></textarea>
-                    <div style="font-size: 11px; color: #666; margin-top: 5px;">
-                        You can include or exclude @ symbols - they'll be normalized automatically
+                    <div style="font-size: 11px; color: #999; margin-top: 8px; display: flex; justify-content: space-between;">
+                        <span>💡 Tip: Copy usernames from TikTok and paste them here</span>
+                        <span id="count-${simpleHash(url)}" style="font-weight: 500;">0 creators</span>
                     </div>
                 </div>
             `).join('')}
             
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button id="saveManualData" style="flex: 1; background: #667eea; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
-                    💾 Save Creator Data
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button id="saveManualData" style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    💾 Save All Creator Data
                 </button>
-                <button id="cancelManualData" style="flex: 1; background: #ccc; color: #333; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                <button id="cancelManualData" style="flex: 1; background: #f5f5f5; color: #333; border: 2px solid #ddd; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
                     ❌ Cancel
                 </button>
             </div>
@@ -172,9 +202,27 @@ creator_name_4
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
         
+        // Add real-time counting
+        Object.keys(soundsData).forEach(url => {
+            const textarea = document.getElementById(`creators-${simpleHash(url)}`);
+            const counter = document.getElementById(`count-${simpleHash(url)}`);
+            
+            if (textarea && counter) {
+                textarea.addEventListener('input', function() {
+                    const creators = this.value
+                        .split('\n')
+                        .map(name => name.trim().replace('@', ''))
+                        .filter(name => name.length > 0);
+                    counter.textContent = `${creators.length} creators`;
+                    counter.style.color = creators.length > 0 ? '#4caf50' : '#999';
+                });
+            }
+        });
+        
         // Handle save
         document.getElementById('saveManualData').addEventListener('click', function() {
             let totalCreators = 0;
+            let soundsWithData = 0;
             
             Object.entries(soundsData).forEach(([url, data]) => {
                 const textarea = document.getElementById(`creators-${simpleHash(url)}`);
@@ -184,20 +232,26 @@ creator_name_4
                         .map(name => name.trim().replace('@', ''))
                         .filter(name => name.length > 0);
                     
-                    soundsData[url].usernames = creators;
-                    totalCreators += creators.length;
+                    if (creators.length > 0) {
+                        soundsData[url].usernames = creators;
+                        totalCreators += creators.length;
+                        soundsWithData++;
+                    }
                 }
             });
             
+            if (totalCreators === 0) {
+                showStatus('Please enter at least some creator data before saving', 'error');
+                return;
+            }
+            
             updateSoundsDisplay();
-            showStatus(`✅ Saved ${totalCreators} creators across ${Object.keys(soundsData).length} sounds!`, 'success');
+            showStatus(`✅ Saved ${totalCreators} creators across ${soundsWithData} sound(s)!`, 'success');
             document.body.removeChild(modal);
             
             // Enable analysis if we have data
-            if (totalCreators > 0) {
-                startAnalysisBtn.disabled = false;
-                startAnalysisBtn.textContent = `🎯 Analyze Manual Data`;
-            }
+            startAnalysisBtn.disabled = false;
+            startAnalysisBtn.textContent = `🎯 Analyze Manual Data (${totalCreators} creators)`;
         });
         
         // Handle cancel
