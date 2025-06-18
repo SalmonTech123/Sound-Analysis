@@ -161,6 +161,14 @@
             box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
         }
         
+        .btn.tertiary {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+        
+        .btn.tertiary:hover {
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+        
         .spinner {
             display: inline-block;
             width: 20px;
@@ -390,7 +398,7 @@
             color: #5a67d8;
         }
         
-        .creator-input-btn {
+        .creator-input-btn, .edit-title-btn {
             background: #667eea;
             color: white;
             border: none;
@@ -401,11 +409,17 @@
             transition: background-color 0.3s ease;
         }
         
-        .creator-input-btn:hover {
+        .edit-title-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: auto;
+        }
+        
+        .creator-input-btn:hover, .edit-title-btn:hover {
             background: #5a67d8;
         }
         
-        .creator-input-btn:disabled {
+        .creator-input-btn:disabled, .edit-title-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
@@ -419,6 +433,67 @@
         .creator-count.has-data {
             color: #4caf50;
             font-weight: 600;
+        }
+        
+        .editable-title {
+            cursor: pointer;
+        }
+        
+        .editable-title:hover {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        
+        .settings-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .settings-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .settings-section input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .hashtag-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .hashtag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .hashtag-name {
+            font-weight: 500;
+            color: #667eea;
+        }
+        
+        .hashtag-count {
+            font-size: 12px;
+            color: #666;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -434,11 +509,24 @@
             <h3>📋 How to Use Sound Analysis</h3>
             <ol>
                 <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of TikTok sounds you want to analyze (one per line)</li>
-                <li><strong>Click each sound link:</strong> Use the Sound Data Collector extension to collect creator usernames</li>
+                <li><strong>Configure Settings:</strong> Set your Last.fm API key for genre analysis (optional)</li>
+                <li><strong>Click each sound link:</strong> Use the Sound Data Collector extension to collect creator usernames and hashtags</li>
+                <li><strong>Edit Song Names:</strong> Click the pencil icon to edit song titles for better genre matching</li>
                 <li><strong>Input Creator Lists:</strong> Return here and add the creators you've collected for each sound</li>
-                <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds</li>
+                <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds, analyze hashtags, and fetch genres</li>
                 <li><strong>Export Results:</strong> Download CSV files for your marketing campaigns</li>
             </ol>
+        </div>
+
+        <!-- Genre Analysis Info -->
+        <div class="settings-section">
+            <h4>🎵 Genre Analysis</h4>
+            <div style="font-size: 14px; color: #333; margin-bottom: 10px;">
+                ✅ Automatic genre detection enabled via Last.fm
+            </div>
+            <div style="font-size: 12px; color: #666;">
+                💡 Song genres will be automatically fetched during analysis. Make sure to edit song titles for better genre matching accuracy.
+            </div>
         </div>
 
         <div id="status" class="status"></div>
@@ -518,13 +606,20 @@ Paste your TikTok sound URLs here..."></textarea>
                 </table>
                 
                 <div class="export-buttons">
-                    <button id="exportCSV" class="btn secondary">📊 Export CSV</button>
-                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators</button>
+                    <button id="exportCSV" class="btn secondary">📊 Export Overlapping Creators CSV</button>
+                    <button onclick="exportAllCreators()" class="btn tertiary">📋 Export All Creators CSV</button>
+                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators JSON</button>
                 </div>
             </div>
+
+            <!-- Hashtags Section (will be added dynamically) -->
         </div>
     </div>
 
+    <script>
+        // Built-in Last.fm API key
+        window.LASTFM_API_KEY = process.env.LASTFM_API_KEY || 'your_api_key_here'; // Replace with your actual API key
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
