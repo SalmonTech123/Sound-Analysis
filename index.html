@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sound Analysis - Enhanced TikTok Creator Overlap Tool</title>
+    <title>Sound Analysis - TikTok Creator Overlap Tool</title>
     <style>
         * {
             margin: 0;
@@ -42,26 +42,6 @@
             opacity: 0.9;
             max-width: 600px;
             margin: 0 auto;
-        }
-        
-        .genre-info {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-            color: white;
-            backdrop-filter: blur(10px);
-        }
-        
-        .genre-info h3 {
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .genre-info p {
-            opacity: 0.9;
-            font-size: 14px;
         }
         
         .main-content {
@@ -247,23 +227,6 @@
             font-size: 18px;
             color: #333;
             margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .edit-title-btn {
-            background: none;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            opacity: 0.6;
-            transition: opacity 0.3s;
-            padding: 4px;
-        }
-        
-        .edit-title-btn:hover {
-            opacity: 1;
         }
         
         .sound-url {
@@ -277,60 +240,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .sound-genre {
-            font-size: 14px;
-            color: #667eea;
-            font-weight: 500;
-            margin-top: 8px;
-        }
-        
-        .hashtags-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e9ecef;
-        }
-        
-        .hashtags-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .hashtags-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        
-        .hashtag-category {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .hashtag-category h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .hashtag-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        
-        .hashtag-tag {
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 4px 10px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 500;
         }
         
         .creators-table {
@@ -417,7 +326,7 @@
         
         .export-buttons .btn {
             flex: 1;
-            min-width: 180px;
+            min-width: 200px;
         }
         
         .progress-container {
@@ -439,6 +348,20 @@
             transition: width 0.3s ease;
         }
         
+        .demo-note {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        
+        .demo-note strong {
+            color: #533f03;
+        }
+        
+        /* Sound item styles for the data collection section */
         .sound-item-data {
             background: #f8f9fa;
             border: 2px solid #e1e8ed;
@@ -467,7 +390,7 @@
             color: #5a67d8;
         }
         
-        .data-input-btn {
+        .creator-input-btn {
             background: #667eea;
             color: white;
             border: none;
@@ -478,24 +401,52 @@
             transition: background-color 0.3s ease;
         }
         
-        .data-input-btn:hover {
+        .creator-input-btn:hover {
             background: #5a67d8;
         }
         
-        .data-input-btn:disabled {
+        .creator-input-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
         
-        .data-count {
+        .creator-count {
             font-size: 12px;
             color: #666;
             margin-top: 8px;
         }
         
-        .data-count.has-data {
+        .creator-count.has-data {
             color: #4caf50;
             font-weight: 600;
+        }
+        
+        /* Genre Analysis Styles */
+        .genre-bars {
+            margin-top: 15px;
+        }
+        
+        .genre-bar {
+            margin-bottom: 12px;
+        }
+        
+        .genre-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        /* Hashtag Styles */
+        .hashtags-grid {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .hashtag-item {
+            transition: background-color 0.2s ease;
+        }
+        
+        .hashtag-item:hover {
+            background: #e9ecef !important;
         }
     </style>
 </head>
@@ -503,25 +454,18 @@
     <div class="container">
         <div class="header">
             <h1>🎵 Sound Analysis</h1>
-            <p>Enhanced TikTok creator overlap analysis with hashtag insights and genre detection</p>
-        </div>
-
-        <!-- Genre Detection Info -->
-        <div class="genre-info">
-            <h3>🎼 Automatic Genre Detection Enabled</h3>
-            <p>Songs are automatically matched with Last.fm for accurate genre classification</p>
+            <p>Discover creators who work across multiple TikTok sounds for targeted music marketing campaigns</p>
         </div>
 
         <!-- Instructions -->
         <div class="instructions">
-            <h3>📋 How to Use Enhanced Sound Analysis</h3>
+            <h3>📋 How to Use Sound Analysis</h3>
             <ol>
-                <li><strong>Install Extension:</strong> Use our Chrome extension to collect data from TikTok sound pages</li>
-                <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of sounds you want to analyze</li>
-                <li><strong>Collect Data:</strong> Use the extension on each sound page to gather creators and hashtags</li>
-                <li><strong>Add Data:</strong> Paste the formatted data from the extension into each sound entry</li>
-                <li><strong>Run Analysis:</strong> Process everything to find overlapping creators and trending hashtags</li>
-                <li><strong>Export Results:</strong> Download comprehensive reports with TikTok links</li>
+                <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of TikTok sounds you want to analyze (one per line)</li>
+                <li><strong>Click each sound link:</strong> Use the Sound Data Collector extension to collect creator usernames</li>
+                <li><strong>Input Creator Lists:</strong> Return here and add the creators you've collected for each sound</li>
+                <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds</li>
+                <li><strong>Export Results:</strong> Download CSV files for your marketing campaigns</li>
             </ol>
         </div>
 
@@ -546,15 +490,15 @@ Paste your TikTok sound URLs here..."></textarea>
                 <button id="addSounds" class="btn">📝 Add Sounds to Analysis</button>
             </div>
 
-            <!-- Data Collection Section -->
+            <!-- Analysis Section -->
             <div class="card">
-                <h2><span class="step-number">2</span>Collect Data</h2>
+                <h2><span class="step-number">2</span>Collect Creator Data</h2>
                 
                 <div id="soundsAdded">
                     <p style="color: #666; text-align: center; padding: 20px;">No sounds added yet</p>
                 </div>
                 
-                <button id="startAnalysis" class="btn" disabled>🚀 Add data for all sounds first</button>
+                <button id="startAnalysis" class="btn" disabled>🚀 Add creator data for all sounds first</button>
                 
                 <div id="analysisProgress" style="display: none;">
                     <div class="progress-container">
@@ -572,10 +516,16 @@ Paste your TikTok sound URLs here..."></textarea>
                 
                 <div id="soundsList" class="sounds-list"></div>
                 
-                <!-- Hashtag Analysis -->
-                <div id="hashtagsSection" class="hashtags-section" style="display: none;">
-                    <h3 class="hashtags-title">🏷️ Hashtag Analysis</h3>
-                    <div id="hashtagsGrid" class="hashtags-grid"></div>
+                <!-- Hashtags Analysis -->
+                <div id="hashtagsSection" style="margin-bottom: 30px;">
+                    <h3>📊 Top Global Hashtags</h3>
+                    <p style="color: #666; text-align: center; padding: 20px;">Run analysis to see hashtag data</p>
+                </div>
+                
+                <!-- Genre Analysis -->
+                <div id="genreSection" style="margin-bottom: 30px;">
+                    <h3>🎵 Genre Analysis</h3>
+                    <p style="color: #666; text-align: center; padding: 20px;">Run analysis to see genre data</p>
                 </div>
                 
                 <h3 style="margin-bottom: 20px;">🎯 Top Overlapping Creators</h3>
@@ -595,7 +545,6 @@ Paste your TikTok sound URLs here..."></textarea>
                         <tr>
                             <th>Rank</th>
                             <th>Creator</th>
-                            <th>TikTok Link</th>
                             <th>Sound Count</th>
                             <th>Overlap %</th>
                             <th>Sounds Appeared In</th>
@@ -603,24 +552,19 @@ Paste your TikTok sound URLs here..."></textarea>
                     </thead>
                     <tbody id="creatorsTableBody">
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 20px; color: #666;">Run analysis to see results</td>
+                            <td colspan="5" style="text-align: center; padding: 20px; color: #666;">Run analysis to see results</td>
                         </tr>
                     </tbody>
                 </table>
                 
                 <div class="export-buttons">
-                    <button id="exportOverlapping" class="btn secondary">📊 Export Overlapping Creators</button>
-                    <button id="exportAllCreators" class="btn secondary">👥 Export All Creators</button>
-                    <button id="exportEnhancedJSON" class="btn secondary">📁 Export Enhanced JSON</button>
+                    <button id="exportCSV" class="btn secondary">📊 Export CSV</button>
+                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Built-in Last.fm API key
-        window.LASTFM_API_KEY = '02950ad70c5a13ec5b2152ff0a85a1d7';
-    </script>
     <script src="script.js"></script>
 </body>
 </html>
