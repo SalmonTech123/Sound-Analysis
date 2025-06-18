@@ -217,6 +217,9 @@ document.addEventListener('DOMContentLoaded', function() {
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         `;
         
+        // Format existing data for display
+        const existingData = formatDataForModal(soundData);
+        
         modalContent.innerHTML = `
             <div style="text-align: center; margin-bottom: 25px;">
                 <h3 style="margin-bottom: 10px; color: #333; font-size: 20px;">📋 Add Creator Data</h3>
@@ -227,49 +230,38 @@ document.addEventListener('DOMContentLoaded', function() {
             <div style="background: #e3f2fd; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
                 <h4 style="color: #1565c0; margin-bottom: 8px; font-size: 14px;">💡 Instructions:</h4>
                 <ul style="color: #1976d2; font-size: 12px; margin-left: 15px; line-height: 1.5;">
-                    <li>Paste creator usernames from the extension (one per line)</li>
-                    <li>You can include or exclude @ symbols</li>
-                    <li>Example: username1, @username2, creator_name</li>
+                    <li><strong>Copy ALL data</strong> from the extension using "Copy All Data" button</li>
+                    <li><strong>Paste below</strong> - the website will automatically parse song, creators, and hashtags</li>
+                    <li>Format should be: SONG: Artist - Title, CREATORS: username1, username2, HASHTAGS: #tag1:count</li>
                 </ul>
             </div>
             
             <div style="margin-bottom: 20px;">
                 <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px;">
-                    Creator Usernames (one per line):
+                    Paste Extension Data (All in one):
                 </label>
                 <textarea 
-                    id="creatorTextarea" 
-                    placeholder="Paste usernames here:
+                    id="allDataTextarea" 
+                    placeholder="SONG: Artist - Song Title
 
+CREATORS:
 username1
-@username2
+username2
 creator_name
-viral_creator"
-                    style="width: 100%; height: 200px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: white;"
-                >${soundData.usernames.join('\n')}</textarea>
-                <div id="creatorCount" style="font-size: 11px; color: #999; margin-top: 8px; text-align: right;">
-                    ${soundData.usernames.length} creators
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px;">
-                    Hashtags (paste from extension):
-                </label>
-                <textarea 
-                    id="hashtagTextarea" 
-                    placeholder="Paste hashtags here (format: #hashtag:count):
 
-#metal:5
-#rock:3
-#music:2"
-                    style="width: 100%; height: 100px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: white;"
-                >${soundData.hashtags ? soundData.hashtags.map(([tag, count]) => `#${tag}:${count}`).join('\n') : ''}</textarea>
+HASHTAGS:
+#hashtag1:5
+#hashtag2:3"
+                    style="width: 100%; height: 300px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: white;"
+                >${existingData}</textarea>
+                <div id="parseStatus" style="font-size: 11px; color: #999; margin-top: 8px; text-align: right;">
+                    Paste data to see parse preview
+                </div>
             </div>
             
             <div style="display: flex; gap: 15px;">
                 <button id="saveCreatorData" style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
-                    💾 Save All Data
+                    💾 Parse & Save Data
                 </button>
                 <button id="cancelCreatorData" style="flex: 1; background: #f5f5f5; color: #333; border: 2px solid #ddd; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
                     ❌ Cancel
@@ -280,47 +272,36 @@ viral_creator"
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
         
-        // Add real-time counting
-        const textarea = document.getElementById('creatorTextarea');
-        const counter = document.getElementById('creatorCount');
+        // Add real-time parsing preview
+        const textarea = document.getElementById('allDataTextarea');
+        const parseStatus = document.getElementById('parseStatus');
         
         textarea.addEventListener('input', function() {
-            const creators = this.value
-                .split('\n')
-                .map(name => name.trim().replace('@', ''))
-                .filter(name => name.length > 0);
-            counter.textContent = `${creators.length} creators`;
-            counter.style.color = creators.length > 0 ? '#4caf50' : '#999';
+            const parsedData = parseExtensionData(this.value);
+            parseStatus.innerHTML = `
+                <div style="font-size: 10px; color: #333; background: #f0f0f0; padding: 5px; border-radius: 4px;">
+                    Song: ${parsedData.song || 'Not found'}<br>
+                    Artist: ${parsedData.artist || 'Not found'}<br>
+                    Creators: ${parsedData.usernames.length}<br>
+                    Hashtags: ${parsedData.hashtags.length}
+                </div>
+            `;
         });
         
         // Handle save
         document.getElementById('saveCreatorData').addEventListener('click', function() {
-            const creators = textarea.value
-                .split('\n')
-                .map(name => name.trim().replace('@', ''))
-                .filter(name => name.length > 0);
+            const parsedData = parseExtensionData(textarea.value);
             
-            // Parse hashtags
-            const hashtagTextarea = document.getElementById('hashtagTextarea');
-            const hashtagLines = hashtagTextarea.value.split('\n').filter(line => line.trim());
-            const hashtags = [];
+            // Update sound data
+            if (parsedData.song && parsedData.artist) {
+                soundsData[soundUrl].title = `${parsedData.artist} - ${parsedData.song}`;
+            }
+            soundsData[soundUrl].usernames = parsedData.usernames;
+            soundsData[soundUrl].hashtags = parsedData.hashtags;
             
-            hashtagLines.forEach(line => {
-                const match = line.match(/#([^:]+):(\d+)/);
-                if (match) {
-                    hashtags.push([match[1], parseInt(match[2])]);
-                }
-            });
-            
-            soundsData[soundUrl].usernames = creators;
-            soundsData[soundUrl].hashtags = hashtags;
             updateSoundsDisplay();
             
-            if (creators.length > 0) {
-                showStatus(`✅ Saved ${creators.length} creators and ${hashtags.length} hashtags for "${soundData.title}"!`, 'success');
-            } else {
-                showStatus(`Cleared data for "${soundData.title}"`, 'info');
-            }
+            showStatus(`✅ Parsed and saved: ${parsedData.usernames.length} creators, ${parsedData.hashtags.length} hashtags!`, 'success');
             
             document.body.removeChild(modal);
         });
@@ -340,6 +321,81 @@ viral_creator"
         // Focus on textarea
         setTimeout(() => textarea.focus(), 100);
     };
+
+    // Parse extension data from the unified format
+    function parseExtensionData(data) {
+        const result = {
+            song: '',
+            artist: '',
+            usernames: [],
+            hashtags: []
+        };
+        
+        if (!data.trim()) return result;
+        
+        // Parse song information
+        const songMatch = data.match(/SONG:\s*(.+?)(?:\n|$)/i);
+        if (songMatch) {
+            const songLine = songMatch[1].trim();
+            // Try to parse "Artist - Song" format
+            const artistSongMatch = songLine.match(/(.+?)\s*-\s*(.+)/);
+            if (artistSongMatch) {
+                result.artist = artistSongMatch[1].trim();
+                result.song = artistSongMatch[2].trim();
+            } else {
+                result.song = songLine;
+            }
+        }
+        
+        // Parse creators section
+        const creatorsMatch = data.match(/CREATORS:\s*([\s\S]*?)(?:\n\n|HASHTAGS:|$)/i);
+        if (creatorsMatch) {
+            const creatorsText = creatorsMatch[1];
+            result.usernames = creatorsText
+                .split('\n')
+                .map(line => line.trim().replace('@', ''))
+                .filter(username => username.length > 0 && !username.toLowerCase().includes('hashtag'));
+        }
+        
+        // Parse hashtags section
+        const hashtagsMatch = data.match(/HASHTAGS:\s*([\s\S]*?)$/i);
+        if (hashtagsMatch) {
+            const hashtagsText = hashtagsMatch[1];
+            const hashtagLines = hashtagsText.split('\n').filter(line => line.trim());
+            
+            hashtagLines.forEach(line => {
+                const hashtagMatch = line.match(/#([^:]+):(\d+)/);
+                if (hashtagMatch) {
+                    result.hashtags.push([hashtagMatch[1], parseInt(hashtagMatch[2])]);
+                }
+            });
+        }
+        
+        return result;
+    }
+
+    // Format existing data for modal display
+    function formatDataForModal(soundData) {
+        if (!soundData.usernames.length && !soundData.hashtags.length) {
+            return '';
+        }
+        
+        let formatted = '';
+        
+        if (soundData.title) {
+            formatted += `SONG: ${soundData.title}\n\n`;
+        }
+        
+        if (soundData.usernames.length > 0) {
+            formatted += `CREATORS:\n${soundData.usernames.join('\n')}\n\n`;
+        }
+        
+        if (soundData.hashtags.length > 0) {
+            formatted += `HASHTAGS:\n${soundData.hashtags.map(([tag, count]) => `#${tag}:${count}`).join('\n')}`;
+        }
+        
+        return formatted;
+    }
 
     // Start analysis process
     startAnalysisBtn.addEventListener('click', async function() {
@@ -463,7 +519,7 @@ viral_creator"
         }, 500);
     }
 
-    // Display hashtag analysis (consolidated)
+    // Display hashtag analysis (consolidated with bubble style)
     function displayHashtagAnalysis() {
         const hashtagsSection = document.getElementById('hashtagsSection');
         if (!hashtagsSection) return;
@@ -480,13 +536,57 @@ viral_creator"
         
         hashtagsSection.innerHTML = `
             <h3>📊 Top Global Hashtags (${globalHashtags.length} found)</h3>
-            <div class="hashtags-grid">
-                ${globalHashtags.map(([hashtag, count], index) => `
-                    <div class="hashtag-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
-                        <span style="font-weight: 600; color: #667eea;">#${escapeHtml(hashtag)}</span>
-                        <span style="background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">${count}</span>
-                    </div>
-                `).join('')}
+            <div class="hashtags-bubble-container" style="
+                display: flex; 
+                flex-wrap: wrap; 
+                gap: 8px; 
+                padding: 20px; 
+                background: #f8f9fa; 
+                border-radius: 12px; 
+                margin-top: 15px;
+                max-height: 200px;
+                overflow-y: auto;
+            ">
+                ${globalHashtags.map(([hashtag, count], index) => {
+                    // Create size based on frequency (largest gets size 1.4em, smallest gets 0.9em)
+                    const maxCount = Math.max(...globalHashtags.map(([,c]) => c));
+                    const minCount = Math.min(...globalHashtags.map(([,c]) => c));
+                    const sizeRange = maxCount - minCount;
+                    const normalizedSize = sizeRange > 0 ? (count - minCount) / sizeRange : 0.5;
+                    const fontSize = 0.9 + (normalizedSize * 0.5); // 0.9em to 1.4em
+                    
+                    // Color intensity based on frequency
+                    const intensity = Math.round(100 + (normalizedSize * 155)); // 100 to 255
+                    const bgColor = `rgba(102, 126, 234, ${0.1 + (normalizedSize * 0.2)})`; // 0.1 to 0.3 opacity
+                    
+                    return `
+                        <span class="hashtag-bubble" style="
+                            display: inline-block;
+                            background: ${bgColor};
+                            color: #667eea;
+                            padding: 6px 12px;
+                            border-radius: 20px;
+                            font-size: ${fontSize}em;
+                            font-weight: 600;
+                            border: 2px solid rgba(102, 126, 234, ${0.2 + (normalizedSize * 0.3)});
+                            transition: transform 0.2s ease, box-shadow 0.2s ease;
+                            cursor: default;
+                            white-space: nowrap;
+                        " 
+                        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'" 
+                        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'"
+                        title="Used ${count} times across sounds"
+                        >
+                            #${escapeHtml(hashtag)} <span style="
+                                background: rgba(102, 126, 234, 0.2); 
+                                padding: 2px 6px; 
+                                border-radius: 10px; 
+                                font-size: 0.8em; 
+                                margin-left: 4px;
+                            ">${count}</span>
+                        </span>
+                    `;
+                }).join('')}
             </div>
         `;
     }
@@ -547,37 +647,80 @@ viral_creator"
         };
     }
 
-    // Get genre from Last.fm API
+    // Get genre from Last.fm API with better error handling
     async function getGenreFromLastFM(artist, track) {
         if (!LASTFM_API_KEY) {
             throw new Error('Last.fm API key not configured');
         }
         
+        console.log(`Looking up genre for: "${track}" by "${artist}"`);
+        
         try {
             // First try to get track info
             const trackUrl = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LASTFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`;
             
+            console.log('Track URL:', trackUrl);
+            
             const trackResponse = await fetch(trackUrl);
             const trackData = await trackResponse.json();
             
-            if (trackData.track && trackData.track.toptags && trackData.track.toptags.tag && trackData.track.toptags.tag.length > 0) {
+            console.log('Track response:', trackData);
+            
+            if (trackData.error) {
+                console.log('Track API error:', trackData.message);
+            } else if (trackData.track && trackData.track.toptags && trackData.track.toptags.tag && trackData.track.toptags.tag.length > 0) {
                 // Get top 3 tags from track
                 const tags = trackData.track.toptags.tag.slice(0, 3).map(tag => tag.name);
+                console.log('Found track tags:', tags);
                 return tags.join(', ');
             }
             
             // Fallback to artist info if track tags not available
+            console.log('No track tags found, trying artist...');
             const artistUrl = `https://ws.audioscrobbler.com/2.0/?method=artist.getInfo&api_key=${LASTFM_API_KEY}&artist=${encodeURIComponent(artist)}&format=json`;
+            
+            console.log('Artist URL:', artistUrl);
             
             const artistResponse = await fetch(artistUrl);
             const artistData = await artistResponse.json();
             
-            if (artistData.artist && artistData.artist.tags && artistData.artist.tags.tag && artistData.artist.tags.tag.length > 0) {
+            console.log('Artist response:', artistData);
+            
+            if (artistData.error) {
+                console.log('Artist API error:', artistData.message);
+            } else if (artistData.artist && artistData.artist.tags && artistData.artist.tags.tag && artistData.artist.tags.tag.length > 0) {
                 const tags = artistData.artist.tags.tag.slice(0, 3).map(tag => tag.name);
+                console.log('Found artist tags:', tags);
                 return tags.join(', ');
             }
             
-            // If no tags found, return null
+            // Try alternative search method
+            console.log('No artist tags found, trying search...');
+            const searchUrl = `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(track)}&artist=${encodeURIComponent(artist)}&api_key=${LASTFM_API_KEY}&format=json&limit=1`;
+            
+            const searchResponse = await fetch(searchUrl);
+            const searchData = await searchResponse.json();
+            
+            console.log('Search response:', searchData);
+            
+            if (searchData.results && searchData.results.trackmatches && searchData.results.trackmatches.track && searchData.results.trackmatches.track.length > 0) {
+                const foundTrack = searchData.results.trackmatches.track[0];
+                console.log('Found track via search:', foundTrack);
+                
+                // Try to get info for the found track
+                const foundTrackUrl = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LASTFM_API_KEY}&artist=${encodeURIComponent(foundTrack.artist)}&track=${encodeURIComponent(foundTrack.name)}&format=json`;
+                
+                const foundTrackResponse = await fetch(foundTrackUrl);
+                const foundTrackData = await foundTrackResponse.json();
+                
+                if (foundTrackData.track && foundTrackData.track.toptags && foundTrackData.track.toptags.tag && foundTrackData.track.toptags.tag.length > 0) {
+                    const tags = foundTrackData.track.toptags.tag.slice(0, 3).map(tag => tag.name);
+                    console.log('Found tags via search:', tags);
+                    return tags.join(', ');
+                }
+            }
+            
+            console.log('No genres found for this track');
             return null;
             
         } catch (error) {
