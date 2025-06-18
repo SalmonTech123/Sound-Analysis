@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sound Analysis - TikTok Creator Overlap Tool</title>
+    <title>Sound Analysis - Enhanced TikTok Creator Overlap Tool</title>
     <style>
         * {
             margin: 0;
@@ -42,6 +42,26 @@
             opacity: 0.9;
             max-width: 600px;
             margin: 0 auto;
+        }
+        
+        .genre-info {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .genre-info h3 {
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+        
+        .genre-info p {
+            opacity: 0.9;
+            font-size: 14px;
         }
         
         .main-content {
@@ -161,14 +181,6 @@
             box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
         }
         
-        .btn.tertiary {
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-        }
-        
-        .btn.tertiary:hover {
-            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
-        }
-        
         .spinner {
             display: inline-block;
             width: 20px;
@@ -235,6 +247,23 @@
             font-size: 18px;
             color: #333;
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .edit-title-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+            padding: 4px;
+        }
+        
+        .edit-title-btn:hover {
+            opacity: 1;
         }
         
         .sound-url {
@@ -248,6 +277,60 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .sound-genre {
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        
+        .hashtags-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .hashtags-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .hashtags-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .hashtag-category {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .hashtag-category h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .hashtag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .hashtag-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
         }
         
         .creators-table {
@@ -334,7 +417,7 @@
         
         .export-buttons .btn {
             flex: 1;
-            min-width: 200px;
+            min-width: 180px;
         }
         
         .progress-container {
@@ -356,20 +439,6 @@
             transition: width 0.3s ease;
         }
         
-        .demo-note {
-            background: #fff3cd;
-            border: 2px solid #ffeaa7;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: #856404;
-        }
-        
-        .demo-note strong {
-            color: #533f03;
-        }
-        
-        /* Sound item styles for the data collection section */
         .sound-item-data {
             background: #f8f9fa;
             border: 2px solid #e1e8ed;
@@ -398,7 +467,7 @@
             color: #5a67d8;
         }
         
-        .creator-input-btn, .edit-title-btn {
+        .data-input-btn {
             background: #667eea;
             color: white;
             border: none;
@@ -409,91 +478,24 @@
             transition: background-color 0.3s ease;
         }
         
-        .edit-title-btn {
-            padding: 6px 10px;
-            font-size: 12px;
-            min-width: auto;
-        }
-        
-        .creator-input-btn:hover, .edit-title-btn:hover {
+        .data-input-btn:hover {
             background: #5a67d8;
         }
         
-        .creator-input-btn:disabled, .edit-title-btn:disabled {
+        .data-input-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
         
-        .creator-count {
+        .data-count {
             font-size: 12px;
             color: #666;
             margin-top: 8px;
         }
         
-        .creator-count.has-data {
+        .data-count.has-data {
             color: #4caf50;
             font-weight: 600;
-        }
-        
-        .editable-title {
-            cursor: pointer;
-        }
-        
-        .editable-title:hover {
-            background: rgba(102, 126, 234, 0.1);
-            padding: 2px 4px;
-            border-radius: 4px;
-        }
-        
-        .settings-section {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .settings-section h4 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-        
-        .settings-section input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        
-        .hashtag-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .hashtag-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .hashtag-name {
-            font-weight: 500;
-            color: #667eea;
-        }
-        
-        .hashtag-count {
-            font-size: 12px;
-            color: #666;
-            background: white;
-            padding: 2px 6px;
-            border-radius: 10px;
         }
     </style>
 </head>
@@ -501,32 +503,26 @@
     <div class="container">
         <div class="header">
             <h1>🎵 Sound Analysis</h1>
-            <p>Discover creators who work across multiple TikTok sounds for targeted music marketing campaigns</p>
+            <p>Enhanced TikTok creator overlap analysis with hashtag insights and genre detection</p>
+        </div>
+
+        <!-- Genre Detection Info -->
+        <div class="genre-info">
+            <h3>🎼 Automatic Genre Detection Enabled</h3>
+            <p>Songs are automatically matched with Last.fm for accurate genre classification</p>
         </div>
 
         <!-- Instructions -->
         <div class="instructions">
-            <h3>📋 How to Use Sound Analysis</h3>
+            <h3>📋 How to Use Enhanced Sound Analysis</h3>
             <ol>
-                <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of TikTok sounds you want to analyze (one per line)</li>
-                <li><strong>Configure Settings:</strong> Set your Last.fm API key for genre analysis (optional)</li>
-                <li><strong>Click each sound link:</strong> Use the Sound Data Collector extension to collect creator usernames and hashtags</li>
-                <li><strong>Edit Song Names:</strong> Click the pencil icon to edit song titles for better genre matching</li>
-                <li><strong>Input Creator Lists:</strong> Return here and add the creators you've collected for each sound</li>
-                <li><strong>Run Analysis:</strong> Process the data to find creators who appear across multiple sounds, analyze hashtags, and fetch genres</li>
-                <li><strong>Export Results:</strong> Download CSV files for your marketing campaigns</li>
+                <li><strong>Install Extension:</strong> Use our Chrome extension to collect data from TikTok sound pages</li>
+                <li><strong>Add TikTok Sound URLs:</strong> Paste URLs of sounds you want to analyze</li>
+                <li><strong>Collect Data:</strong> Use the extension on each sound page to gather creators and hashtags</li>
+                <li><strong>Add Data:</strong> Paste the formatted data from the extension into each sound entry</li>
+                <li><strong>Run Analysis:</strong> Process everything to find overlapping creators and trending hashtags</li>
+                <li><strong>Export Results:</strong> Download comprehensive reports with TikTok links</li>
             </ol>
-        </div>
-
-        <!-- Genre Analysis Info -->
-        <div class="settings-section">
-            <h4>🎵 Genre Analysis</h4>
-            <div style="font-size: 14px; color: #333; margin-bottom: 10px;">
-                ✅ Automatic genre detection enabled via Last.fm
-            </div>
-            <div style="font-size: 12px; color: #666;">
-                💡 Song genres will be automatically fetched during analysis. Make sure to edit song titles for better genre matching accuracy.
-            </div>
         </div>
 
         <div id="status" class="status"></div>
@@ -550,7 +546,7 @@ Paste your TikTok sound URLs here..."></textarea>
                 <button id="addSounds" class="btn">📝 Add Sounds to Analysis</button>
             </div>
 
-            <!-- Analysis Section -->
+            <!-- Data Collection Section -->
             <div class="card">
                 <h2><span class="step-number">2</span>Collect Data</h2>
                 
@@ -576,6 +572,12 @@ Paste your TikTok sound URLs here..."></textarea>
                 
                 <div id="soundsList" class="sounds-list"></div>
                 
+                <!-- Hashtag Analysis -->
+                <div id="hashtagsSection" class="hashtags-section" style="display: none;">
+                    <h3 class="hashtags-title">🏷️ Hashtag Analysis</h3>
+                    <div id="hashtagsGrid" class="hashtags-grid"></div>
+                </div>
+                
                 <h3 style="margin-bottom: 20px;">🎯 Top Overlapping Creators</h3>
                 
                 <div style="margin-bottom: 20px;">
@@ -593,6 +595,7 @@ Paste your TikTok sound URLs here..."></textarea>
                         <tr>
                             <th>Rank</th>
                             <th>Creator</th>
+                            <th>TikTok Link</th>
                             <th>Sound Count</th>
                             <th>Overlap %</th>
                             <th>Sounds Appeared In</th>
@@ -600,25 +603,23 @@ Paste your TikTok sound URLs here..."></textarea>
                     </thead>
                     <tbody id="creatorsTableBody">
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 20px; color: #666;">Run analysis to see results</td>
+                            <td colspan="6" style="text-align: center; padding: 20px; color: #666;">Run analysis to see results</td>
                         </tr>
                     </tbody>
                 </table>
                 
                 <div class="export-buttons">
-                    <button id="exportCSV" class="btn secondary">📊 Export Overlapping Creators CSV</button>
-                    <button onclick="exportAllCreators()" class="btn tertiary">📋 Export All Creators CSV</button>
-                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators JSON</button>
+                    <button id="exportOverlapping" class="btn secondary">📊 Export Overlapping Creators</button>
+                    <button id="exportAllCreators" class="btn secondary">👥 Export All Creators</button>
+                    <button id="exportEnhancedJSON" class="btn secondary">📁 Export Enhanced JSON</button>
                 </div>
             </div>
-
-            <!-- Hashtags Section (will be added dynamically) -->
         </div>
     </div>
 
     <script>
-        // Built-in Last.fm API key - Replace with your actual API key
-        window.LASTFM_API_KEY = '08c0312974d651391752ca31baa83f4d'; // Replace this with your real API key
+        // Built-in Last.fm API key
+        window.LASTFM_API_KEY = '02950ad70c5a13ec5b2152ff0a85a1d7';
     </script>
     <script src="script.js"></script>
 </body>
