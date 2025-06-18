@@ -1,4 +1,4 @@
-// Sound Analysis - Main JavaScript functionality
+// Enhanced Sound Analysis - Main JavaScript with Last.fm and Hashtag Analysis
 
 document.addEventListener('DOMContentLoaded', function() {
     // DOM elements
@@ -18,8 +18,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportTop50Btn = document.getElementById('exportTop50');
 
     // Data storage
-    let soundsData = {}; // { soundUrl: { title: "", usernames: [] } }
-    let analysisResults = {}; // Creator overlap analysis
+    let soundsData = {}; // { soundUrl: { title: "", usernames: [], hashtags: {}, genre: "" } }
+    let analysisResults = {}; // Creator overlap analysis + hashtag analysis
+
+    // Last.fm API configuration
+    const LASTFM_API_KEY = ''; // User can set this in settings
+    
+    // Rate limiting for Last.fm API
+    const rateLimiter = {
+        lastRequest: 0,
+        minInterval: 250 // 4 requests per second max
+    };
 
     // Utility functions
     function showStatus(message, type = 'info') {
@@ -38,11 +47,10 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const match = url.match(/\/music\/([^?]+)/);
             if (match) {
-                // Decode and clean up the title
                 let title = decodeURIComponent(match[1]);
-                title = title.replace(/-/g, ' '); // Replace hyphens with spaces
-                title = title.replace(/\s+\d+$/, ''); // Remove trailing numbers (like song IDs)
-                title = title.replace(/\b\w/g, l => l.toUpperCase()); // Capitalize words
+                title = title.replace(/-/g, ' ');
+                title = title.replace(/\s+\d+$/, '');
+                title = title.replace(/\b\w/g, l => l.toUpperCase());
                 return title.trim();
             }
         } catch (error) {
@@ -53,6 +61,135 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function isValidTikTokSoundUrl(url) {
         return url.includes('tiktok.com/music/') && url.includes('-');
+    }
+
+    // Last.fm API functions
+    async function rateLimitedFetch(url) {
+        const now = Date.now();
+        const timeSinceLastRequest = now - rateLimiter.lastRequest;
+        
+        if (timeSinceLastRequest < rateLimiter.minInterval) {
+            await new Promise(resolve => setTimeout(resolve, rateLimiter.minInterval - timeSinceLastRequest));
+        }
+        
+        rateLimiter.lastRequest = Date.now();
+        return fetch(url);
+    }
+
+    async function searchLastFmTrack(trackName, artistName = '') {
+        if (!LASTFM_API_KEY) return null;
+        
+        try {
+            let searchUrl = `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(trackName)}`;
+            
+            if (artistName) {
+                searchUrl += `&artist=${encodeURIComponent(artistName)}`;
+            }
+            
+            searchUrl += `&api_key=${LASTFM_API_KEY}&format=json`;
+            
+            const response = await rateLimitedFetch(searchUrl);
+            const data = await response.json();
+            
+            if (data.results && data.results.trackmatches && data.results.trackmatches.track && 
+                data.results.trackmatches.track.length > 0) {
+                const topMatch = data.results.trackmatches.track[0];
+                return {
+                    found: true,
+                    track: topMatch.name,
+                    artist: topMatch.artist
+                };
+            }
+            
+            return { found: false };
+        } catch (error) {
+            console.error(`Error searching Last.fm: ${error.message}`);
+            return { found: false };
+        }
+    }
+
+    async function getLastFmGenre(track, artist) {
+        if (!LASTFM_API_KEY) return '';
+        
+        try {
+            // Try track tags first
+            let url = `https://ws.audioscrobbler.com/2.0/?method=track.getTopTags&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&api_key=${LASTFM_API_KEY}&format=json`;
+            
+            let response = await rateLimitedFetch(url);
+            let data = await response.json();
+            
+            if (data.toptags && data.toptags.tag && data.toptags.tag.length > 0) {
+                const validTags = data.toptags.tag.filter(tag => {
+                    const name = tag.name.toLowerCase();
+                    const nonGenreTags = ['seen live', 'favorite', 'favourites', 'awesome', 'love'];
+                    return !nonGenreTags.includes(name);
+                });
+                
+                if (validTags.length > 0) {
+                    return validTags.slice(0, 3).map(tag => tag.name).join(', ');
+                }
+            }
+            
+            // Fall back to artist tags
+            url = `https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&artist=${encodeURIComponent(artist)}&api_key=${LASTFM_API_KEY}&format=json`;
+            
+            response = await rateLimitedFetch(url);
+            data = await response.json();
+            
+            if (data.toptags && data.toptags.tag && data.toptags.tag.length > 0) {
+                const validTags = data.toptags.tag.filter(tag => {
+                    const name = tag.name.toLowerCase();
+                    const nonGenreTags = ['seen live', 'favorite', 'favourites', 'awesome', 'love'];
+                    return !nonGenreTags.includes(name);
+                });
+                
+                if (validTags.length > 0) {
+                    return validTags.slice(0, 3).map(tag => tag.name).join(', ');
+                }
+            }
+            
+            return '';
+        } catch (error) {
+            console.error(`Error fetching Last.fm genre: ${error.message}`);
+            return '';
+        }
+    }
+
+    async function getGenreForSong(songTitle) {
+        if (!songTitle || !LASTFM_API_KEY) return '';
+        
+        // Parse artist from title if format is "Artist - Song"
+        let trackName = songTitle;
+        let artistName = '';
+        
+        if (songTitle.includes(' - ')) {
+            const parts = songTitle.split(' - ');
+            artistName = parts[0].trim();
+            trackName = parts[1].trim();
+        }
+        
+        // Search for the track
+        const searchResult = await searchLastFmTrack(trackName, artistName);
+        
+        if (searchResult.found) {
+            return await getLastFmGenre(searchResult.track, searchResult.artist);
+        } else if (artistName) {
+            // Try just the artist if track search fails
+            const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getTopTags&artist=${encodeURIComponent(artistName)}&api_key=${LASTFM_API_KEY}&format=json`;
+            
+            try {
+                const response = await rateLimitedFetch(url);
+                const data = await response.json();
+                
+                if (data.toptags && data.toptags.tag && data.toptags.tag.length > 0) {
+                    return data.toptags.tag.slice(0, 3).map(tag => tag.name).join(', ');
+                }
+            } catch (error) {
+                console.error('Error fetching artist genre:', error);
+            }
+        }
+        
+        return '';
     }
 
     // Add sounds to analysis
@@ -73,7 +210,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isValidTikTokSoundUrl(url)) {
                 if (!soundsData[url]) {
                     const title = extractSoundTitle(url);
-                    soundsData[url] = { title: title, usernames: [] };
+                    soundsData[url] = { 
+                        title: title, 
+                        usernames: [], 
+                        hashtags: {},
+                        genre: ''
+                    };
                     added++;
                 } else {
                     duplicates++;
@@ -100,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Update sounds display with clickable links and data input buttons
+    // Update sounds display with editable titles
     function updateSoundsDisplay() {
         const soundCount = Object.keys(soundsData).length;
         
@@ -108,13 +250,18 @@ document.addEventListener('DOMContentLoaded', function() {
             soundsAddedDiv.innerHTML = `
                 <h4>📝 ${soundCount} Sound(s) Ready for Analysis:</h4>
                 <div style="font-size: 12px; color: #666; margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 8px;">
-                    💡 <strong>Instructions:</strong> Click each sound link to open in a new tab, use the extension to collect creators, then return here to add the data.
+                    💡 <strong>Instructions:</strong> Click each sound link to open in a new tab, use the extension to collect creators, then return here to add the data. Click the pencil icon to edit song names.
                 </div>
                 ${Object.entries(soundsData).map(([url, data]) => `
                     <div class="sound-item-data ${data.usernames.length > 0 ? 'has-data' : ''}">
-                        <a href="${escapeHtml(url)}" target="_blank" class="sound-link">
-                            🎵 ${escapeHtml(data.title)} ↗️
-                        </a>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <a href="${escapeHtml(url)}" target="_blank" class="sound-link" style="flex: 1;">
+                                🎵 <span class="editable-title" data-url="${escapeHtml(url)}">${escapeHtml(data.title)}</span> ↗️
+                            </a>
+                            <button class="edit-title-btn" onclick="editSoundTitle('${escapeHtml(url).replace(/'/g, "\\'")}')">
+                                ✏️
+                            </button>
+                        </div>
                         <div style="font-size: 11px; color: #666; margin-bottom: 10px; word-break: break-all;">
                             ${escapeHtml(url)}
                         </div>
@@ -138,6 +285,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Global function for editing sound titles
+    window.editSoundTitle = function(soundUrl) {
+        const soundData = soundsData[soundUrl];
+        if (!soundData) return;
+        
+        const newTitle = prompt('Edit song title:', soundData.title);
+        if (newTitle && newTitle.trim() && newTitle.trim() !== soundData.title) {
+            soundData.title = newTitle.trim();
+            updateSoundsDisplay();
+            showStatus('Song title updated!', 'success');
+        }
+    };
+
     // Update analysis button based on data availability
     function updateAnalysisButton() {
         const totalSounds = Object.keys(soundsData).length;
@@ -156,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Global function for opening creator input modal
+    // Global function for opening creator input modal (enhanced for hashtags)
     window.openCreatorInputModal = function(soundUrl) {
         const soundData = soundsData[soundUrl];
         if (!soundData) {
@@ -164,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Create modal
+        // Create modal with enhanced UI
         const modal = document.createElement('div');
         modal.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -175,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalContent = document.createElement('div');
         modalContent.style.cssText = `
             background: white; border-radius: 20px; padding: 30px; 
-            max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto;
+            max-width: 700px; width: 100%; max-height: 80vh; overflow-y: auto;
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         `;
         
@@ -191,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul style="color: #1976d2; font-size: 12px; margin-left: 15px; line-height: 1.5;">
                     <li>Paste creator usernames from the extension (one per line)</li>
                     <li>You can include or exclude @ symbols</li>
-                    <li>Example: username1, @username2, creator_name</li>
+                    <li>The enhanced extension now also collects hashtags automatically!</li>
                 </ul>
             </div>
             
@@ -275,7 +435,7 @@ viral_creator"
         setTimeout(() => textarea.focus(), 100);
     };
 
-    // Start analysis process
+    // Start analysis process (enhanced with genre and hashtag analysis)
     startAnalysisBtn.addEventListener('click', async function() {
         const soundUrls = Object.keys(soundsData);
         const soundsWithData = soundUrls.filter(url => soundsData[url].usernames.length > 0);
@@ -290,17 +450,34 @@ viral_creator"
         analysisProgress.style.display = 'block';
         
         try {
-            progressFill.style.width = '30%';
+            progressFill.style.width = '20%';
             progressText.textContent = `🎯 Analyzing ${soundsWithData.length} sounds with creator data...`;
             
-            // Small delay for visual feedback
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            progressFill.style.width = '70%';
+            progressFill.style.width = '40%';
             progressText.textContent = '🔍 Finding creator overlaps...';
             
             // Analyze overlaps
             analyzeCreatorOverlaps();
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Fetch genres if Last.fm API key is available
+            if (LASTFM_API_KEY) {
+                progressFill.style.width = '60%';
+                progressText.textContent = '🎵 Fetching genre information from Last.fm...';
+                
+                await fetchGenresForSounds();
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            progressFill.style.width = '80%';
+            progressText.textContent = '📊 Analyzing hashtags...';
+            
+            // Analyze hashtags
+            analyzeHashtags();
             
             await new Promise(resolve => setTimeout(resolve, 500));
             
@@ -328,7 +505,25 @@ viral_creator"
         }
     });
 
-    // Analyze creator overlaps
+    // Fetch genres for all sounds
+    async function fetchGenresForSounds() {
+        const soundsWithData = Object.entries(soundsData).filter(([url, data]) => data.usernames.length > 0);
+        
+        for (const [url, data] of soundsWithData) {
+            if (!data.genre) {
+                try {
+                    data.genre = await getGenreForSong(data.title);
+                    if (data.genre) {
+                        console.log(`Found genre for "${data.title}": ${data.genre}`);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching genre for "${data.title}":`, error);
+                }
+            }
+        }
+    }
+
+    // Analyze creator overlaps (enhanced)
     function analyzeCreatorOverlaps() {
         const creatorCounts = {};
         const creatorSounds = {};
@@ -351,10 +546,10 @@ viral_creator"
         // Sort by overlap count, then alphabetically
         const sortedCreators = Object.entries(creatorCounts)
             .sort(([a, countA], [b, countB]) => {
-                if (countB !== countA) return countB - countA; // Sort by count descending
-                return a.localeCompare(b); // Then alphabetically
+                if (countB !== countA) return countB - countA;
+                return a.localeCompare(b);
             })
-            .filter(([,count]) => count >= 2); // Only show creators appearing in multiple sounds
+            .filter(([,count]) => count >= 2);
         
         analysisResults = {
             creatorCounts,
@@ -364,10 +559,47 @@ viral_creator"
         };
     }
 
-    // Display analysis results
+    // Analyze hashtags across all sounds
+    function analyzeHashtags() {
+        const hashtagFrequency = {};
+        const hashtagBySoundCount = {};
+        
+        const soundsWithData = Object.entries(soundsData).filter(([url, data]) => data.usernames.length > 0);
+        
+        soundsWithData.forEach(([url, data]) => {
+            const soundHashtags = new Set();
+            
+            // Collect hashtags from this sound
+            Object.values(data.hashtags || {}).forEach(hashtags => {
+                hashtags.forEach(hashtag => {
+                    hashtagFrequency[hashtag] = (hashtagFrequency[hashtag] || 0) + 1;
+                    soundHashtags.add(hashtag);
+                });
+            });
+            
+            // Count how many sounds each hashtag appears in
+            soundHashtags.forEach(hashtag => {
+                hashtagBySoundCount[hashtag] = (hashtagBySoundCount[hashtag] || 0) + 1;
+            });
+        });
+        
+        // Sort hashtags by frequency
+        const sortedHashtags = Object.entries(hashtagFrequency)
+            .sort(([a, countA], [b, countB]) => countB - countA)
+            .slice(0, 50); // Top 50 hashtags
+        
+        analysisResults.hashtags = {
+            frequency: hashtagFrequency,
+            bySoundCount: hashtagBySoundCount,
+            sorted: sortedHashtags
+        };
+    }
+
+    // Display analysis results (enhanced)
     function displayResults() {
         updateSoundsOverview();
         updateCreatorsTable();
+        updateHashtagsSection();
         resultsSection.style.display = 'block';
         
         // Smooth scroll to results
@@ -389,9 +621,42 @@ viral_creator"
                         <span><strong>${creatorCount.toLocaleString()}</strong> creators</span>
                         <span class="badge ${creatorCount > 150 ? 'high' : creatorCount > 50 ? 'medium' : ''}">${creatorCount > 150 ? 'High' : creatorCount > 50 ? 'Medium' : 'Low'} volume</span>
                     </div>
+                    ${data.genre ? `<div style="margin-top: 8px; font-size: 12px; color: #666;">🎵 Genre: ${escapeHtml(data.genre)}</div>` : ''}
                 </div>
             `;
         }).join('');
+    }
+
+    function updateHashtagsSection() {
+        if (!analysisResults.hashtags || analysisResults.hashtags.sorted.length === 0) return;
+        
+        // Add hashtags section to results if it doesn't exist
+        if (!document.getElementById('hashtagsSection')) {
+            const hashtagsHTML = `
+                <div class="card" id="hashtagsSection" style="grid-column: 1 / -1; margin-top: 20px;">
+                    <h2><span class="step-number">4</span>Most Common Hashtags</h2>
+                    <div id="hashtagsList"></div>
+                </div>
+            `;
+            resultsSection.insertAdjacentHTML('beforeend', hashtagsHTML);
+        }
+        
+        const hashtagsList = document.getElementById('hashtagsList');
+        const topHashtags = analysisResults.hashtags.sorted.slice(0, 20);
+        
+        hashtagsList.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                ${topHashtags.map(([hashtag, count]) => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;">
+                        <span style="font-weight: 500; color: #667eea;">#${escapeHtml(hashtag)}</span>
+                        <span style="font-size: 12px; color: #666; background: white; padding: 2px 6px; border-radius: 10px;">${count}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="font-size: 12px; color: #666; text-align: center; margin-top: 15px;">
+                💡 These hashtags appear most frequently across your analyzed sounds and may provide insights into trending themes
+            </div>
+        `;
     }
 
     function updateCreatorsTable() {
@@ -429,23 +694,25 @@ viral_creator"
     // Filter creators when selection changes
     minSoundsSelect.addEventListener('change', updateCreatorsTable);
 
-    // Export functions
+    // Enhanced export functions
     exportCSVBtn.addEventListener('click', function() {
         if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
             showStatus('No data to export. Please run analysis first.', 'error');
             return;
         }
         
-        const headers = ['Rank', 'Username', 'Sound Count', 'Overlap Percentage', 'Sounds Appeared In'];
+        const headers = ['Rank', 'Username', 'TikTok Link', 'Sound Count', 'Overlap Percentage', 'Sounds Appeared In'];
         const totalSounds = analysisResults.totalSoundsAnalyzed;
         
         const rows = analysisResults.sortedCreators.map(([username, count], index) => {
             const sounds = analysisResults.creatorSounds[username] || [];
             const overlapPercent = Math.round((count / totalSounds) * 100);
+            const tiktokLink = `https://www.tiktok.com/@${username}`;
             
             return [
                 index + 1,
                 username,
+                tiktokLink,
                 count,
                 `${overlapPercent}%`,
                 `"${sounds.join(', ')}"`
@@ -457,9 +724,41 @@ viral_creator"
             ...rows.map(row => row.join(','))
         ].join('\n');
         
-        downloadFile(csvContent, 'sound-analysis-creators.csv', 'text/csv');
-        showStatus('✅ CSV exported successfully!', 'success');
+        downloadFile(csvContent, 'sound-analysis-overlapping-creators.csv', 'text/csv');
+        showStatus('✅ Overlapping creators CSV exported successfully!', 'success');
     });
+
+    // Add export all creators function
+    window.exportAllCreators = function() {
+        if (!soundsData || Object.keys(soundsData).length === 0) {
+            showStatus('No data to export. Please run analysis first.', 'error');
+            return;
+        }
+        
+        const headers = ['Username', 'TikTok Link', 'Sound Title', 'Sound URL'];
+        const rows = [];
+        
+        Object.entries(soundsData).forEach(([url, data]) => {
+            if (data.usernames && data.usernames.length > 0) {
+                data.usernames.forEach(username => {
+                    rows.push([
+                        username,
+                        `https://www.tiktok.com/@${username}`,
+                        data.title,
+                        url
+                    ]);
+                });
+            }
+        });
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        downloadFile(csvContent, 'sound-analysis-all-creators.csv', 'text/csv');
+        showStatus('✅ All creators CSV exported successfully!', 'success');
+    };
 
     exportTop50Btn.addEventListener('click', function() {
         if (!analysisResults.sortedCreators || analysisResults.sortedCreators.length === 0) {
@@ -475,7 +774,13 @@ viral_creator"
                 exportDate: new Date().toISOString(),
                 description: 'Top 50 creators with highest sound overlap',
                 totalSoundsAnalyzed: totalSounds,
-                generatedBy: 'Sound Analysis Tool'
+                generatedBy: 'Sound Analysis Tool',
+                genres: Object.fromEntries(
+                    Object.entries(soundsData)
+                        .filter(([url, data]) => data.genre)
+                        .map(([url, data]) => [data.title, data.genre])
+                ),
+                topHashtags: analysisResults.hashtags ? analysisResults.hashtags.sorted.slice(0, 10) : []
             },
             topCreators: top50.map(([username, count], index) => {
                 const sounds = analysisResults.creatorSounds[username] || [];
@@ -484,6 +789,7 @@ viral_creator"
                 return {
                     rank: index + 1,
                     username: username,
+                    tiktokLink: `https://www.tiktok.com/@${username}`,
                     soundCount: count,
                     overlapPercentage: overlapPercent,
                     reliabilityScore: calculateReliabilityScore(count, totalSounds),
