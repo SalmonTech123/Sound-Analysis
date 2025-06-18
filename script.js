@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let soundsData = {}; // { soundUrl: { title: "", usernames: [], hashtags: {}, genre: "" } }
     let analysisResults = {}; // Creator overlap analysis + hashtag analysis
 
-    // Last.fm API configuration
-    const LASTFM_API_KEY = ''; // User can set this in settings
+    // Last.fm API configuration - Built-in API key
+    const LASTFM_API_KEY = window.LASTFM_API_KEY || 'your_actual_lastfm_api_key_here'; // Replace with your API key from the genre fetcher
     
     // Rate limiting for Last.fm API
     const rateLimiter = {
