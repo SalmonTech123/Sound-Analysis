@@ -318,15 +318,14 @@
         }
         
         .export-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            flex-wrap: wrap;
             margin-top: 20px;
         }
         
         .export-buttons .btn {
-            flex: 1;
-            min-width: 200px;
+            margin-bottom: 0;
         }
         
         .progress-container {
@@ -568,8 +567,10 @@ Paste your TikTok sound URLs here..."></textarea>
                 </table>
                 
                 <div class="export-buttons">
-                    <button id="exportCSV" class="btn secondary">📊 Export CSV</button>
-                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators</button>
+                    <button id="exportCSV" class="btn secondary">📊 Export Overlap Analysis CSV</button>
+                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators JSON</button>
+                    <button id="exportSoundLists" class="btn secondary">📋 Export Individual Sound Lists</button>
+                    <button id="exportAllCreators" class="btn secondary">📁 Export All Sound Creators</button>
                 </div>
             </div>
         </div>
