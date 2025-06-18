@@ -1,4 +1,182 @@
-// Enhanced Sound Analysis - Main JavaScript with Last.fm and Hashtag Analysis
+// Global function for opening creator input modal (enhanced for hashtags and song info)
+    window.openCreatorInputModal = function(soundUrl) {
+        const soundData = soundsData[soundUrl];
+        if (!soundData) {
+            showStatus('Sound not found', 'error');
+            return;
+        }
+
+        // Create modal with enhanced UI
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; display: flex; 
+            align-items: center; justify-content: center; padding: 20px;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white; border-radius: 20px; padding: 30px; 
+            max-width: 700px; width: 100%; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        `;
+        
+        modalContent.innerHTML = `
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h3 style="margin-bottom: 10px; color: #333; font-size: 20px;">📋 Add Data</h3>
+                <p style="color: #667eea; font-weight: 600; margin-bottom: 5px;">${escapeHtml(soundData.title)}</p>
+                <p style="color: #666; font-size: 12px; word-break: break-all;">${escapeHtml(soundUrl)}</p>
+            </div>
+            
+            <div style="background: #e3f2fd; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                <h4 style="color: #1565c0; margin-bottom: 8px; font-size: 14px;">💡 Instructions:</h4>
+                <ul style="color: #1976d2; font-size: 12px; margin-left: 15px; line-height: 1.5;">
+                    <li>Paste data from the extension directly - it will parse creators and hashtags automatically</li>
+                    <li>Or manually enter creator usernames (one per line)</li>
+                    <li>You can include or exclude @ symbols</li>
+                </ul>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 600; color: #333; margin-bottom: 8px;">
+                    Data from Extension (creators, hashtags, song info):
+                </label>
+                <textarea 
+                    id="dataTextarea" 
+                    placeholder="Paste data from extension here, or manually enter usernames:
+
+username1
+@username2
+creator_name
+viral_creator
+
+Or paste full data from extension including song and hashtags..."
+                    style="width: 100%; height: 250px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 13px; resize: vertical; background: white;"
+                >${soundData.usernames.join('\n')}</textarea>
+                <div id="dataCount" style="font-size: 11px; color: #999; margin-top: 8px; text-align: right;">
+                    ${soundData.usernames.length} creators
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <button id="saveData" style="flex: 1; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    💾 Save Data
+                </button>
+                <button id="cancelData" style="flex: 1; background: #f5f5f5; color: #333; border: 2px solid #ddd; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    ❌ Cancel
+                </button>
+            </div>
+        `;
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Add real-time counting and parsing
+        const textarea = document.getElementById('dataTextarea');
+        const counter = document.getElementById('dataCount');
+        
+        function parseExtensionData(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            let creators = [];
+            let hashtags = {};
+            let songInfo = null;
+            
+            let currentSection = '';
+            
+            for (const line of lines) {
+                if (line.startsWith('SONG:')) {
+                    songInfo = line.replace('SONG:', '').trim();
+                    continue;
+                }
+                
+                if (line === 'CREATORS:') {
+                    currentSection = 'creators';
+                    continue;
+                }
+                
+                if (line === 'HASHTAGS:') {
+                    currentSection = 'hashtags';
+                    continue;
+                }
+                
+                if (currentSection === 'creators') {
+                    if (line && !line.includes(':') && !line.includes('#')) {
+                        creators.push(line.replace('@', ''));
+                    }
+                }
+                
+                if (currentSection === 'hashtags') {
+                    if (line.includes(':')) {
+                        const [hashtag, count] = line.split(':');
+                        const cleanHashtag = hashtag.replace('#', '');
+                        hashtags[cleanHashtag] = parseInt(count) || 1;
+                    }
+                }
+                
+                // If no sections detected, treat everything as creators
+                if (!currentSection && line && !line.includes('SONG:') && !line.includes('URL:') && !line.includes('Collected:')) {
+                    creators.push(line.replace('@', ''));
+                }
+            }
+            
+            return { creators, hashtags, songInfo };
+        }
+        
+        textarea.addEventListener('input', function() {
+            const { creators, hashtags, songInfo } = parseExtensionData(this.value);
+            
+            const hashtagCount = Object.keys(hashtags).length;
+            let statusText = `${creators.length} creators`;
+            if (hashtagCount > 0) {
+                statusText += `, ${hashtagCount} hashtags`;
+            }
+            if (songInfo) {
+                statusText += `, song info detected`;
+            }
+            
+            counter.textContent = statusText;
+            counter.style.color = creators.length > 0 ? '#4caf50' : '#999';
+        });
+        
+        // Handle save
+        document.getElementById('saveData').addEventListener('click', function() {
+            const { creators, hashtags, songInfo } = parseExtensionData(textarea.value);
+            
+            // Update song title if detected
+            if (songInfo && songInfo !== soundData.title) {
+                soundData.title = songInfo;
+            }
+            
+            // Save creators and hashtags
+            soundsData[soundUrl].usernames = creators;
+            soundsData[soundUrl].hashtags = hashtags;
+            
+            updateSoundsDisplay();
+            
+            let message = '';
+            if (creators.length > 0) {
+                message = `✅ Saved ${creators.length} creators`;
+                if (Object.keys(hashtags).length > 0) {
+                    message += ` and ${Object.keys(hashtags).length} hashtags`;
+                }
+                message += ` for "${soundData.title}"!`;
+                showStatus(message, 'success');
+            } else {
+                showStatus(`Cleared data for "${soundData.title}"`, 'info');
+            }
+            
+            document.body.removeChild(modal);
+        });
+        
+        // Handle cancel
+        document.getElementById('cancelData').addEventListener('click', function() {
+            document.body.removeChild(modal);
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                // Enhanced Sound Analysis - Main JavaScript with Last.fm and Hashtag Analysis
 
 document.addEventListener('DOMContentLoaded', function() {
     // DOM elements
@@ -22,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let analysisResults = {}; // Creator overlap analysis + hashtag analysis
 
     // Last.fm API configuration - Built-in API key
-    const LASTFM_API_KEY = window.LASTFM_API_KEY || '08c0312974d651391752ca31baa83f4d'; // Replace with your API key from the genre fetcher
+    const LASTFM_API_KEY = window.LASTFM_API_KEY || 'your_actual_lastfm_api_key_here'; // Replace with your API key from the genre fetcher
     
     // Rate limiting for Last.fm API
     const rateLimiter = {
@@ -306,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (soundsWithData === 0) {
             startAnalysisBtn.disabled = true;
-            startAnalysisBtn.textContent = '🚀 Add creator data for all sounds first';
+            startAnalysisBtn.textContent = '🚀 Add data for all sounds first';
         } else if (soundsWithData < totalSounds) {
             startAnalysisBtn.disabled = false;
             startAnalysisBtn.textContent = `🎯 Analyze ${soundsWithData}/${totalSounds} sounds (${totalCreators} creators)`;
@@ -431,8 +609,11 @@ viral_creator"
             }
         });
         
-        // Focus on textarea
-        setTimeout(() => textarea.focus(), 100);
+        // Focus on textarea and trigger initial parsing
+        setTimeout(() => {
+            textarea.focus();
+            textarea.dispatchEvent(new Event('input'));
+        }, 100);
     };
 
     // Start analysis process (enhanced with genre and hashtag analysis)
@@ -441,7 +622,7 @@ viral_creator"
         const soundsWithData = soundUrls.filter(url => soundsData[url].usernames.length > 0);
         
         if (soundsWithData.length === 0) {
-            showStatus('Please add creator data for at least one sound before analyzing', 'error');
+            showStatus('Please add data for at least one sound before analyzing', 'error');
             return;
         }
         
