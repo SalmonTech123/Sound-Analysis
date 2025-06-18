@@ -894,16 +894,18 @@ HASHTAGS:
             return;
         }
         
-        const headers = ['Rank', 'Username', 'Sound Count', 'Overlap Percentage', 'Sounds Appeared In'];
+        const headers = ['Rank', 'Username', 'Profile Link', 'Sound Count', 'Overlap Percentage', 'Sounds Appeared In'];
         const totalSounds = analysisResults.totalSoundsAnalyzed;
         
         const rows = analysisResults.sortedCreators.map(([username, count], index) => {
             const sounds = analysisResults.creatorSounds[username] || [];
             const overlapPercent = Math.round((count / totalSounds) * 100);
+            const profileLink = `https://www.tiktok.com/@${username}`;
             
             return [
                 index + 1,
                 username,
+                profileLink,
                 count,
                 `${overlapPercent}%`,
                 `"${sounds.join(', ')}"`
@@ -938,10 +940,12 @@ HASHTAGS:
             topCreators: top50.map(([username, count], index) => {
                 const sounds = analysisResults.creatorSounds[username] || [];
                 const overlapPercent = Math.round((count / totalSounds) * 100);
+                const profileLink = `https://www.tiktok.com/@${username}`;
                 
                 return {
                     rank: index + 1,
                     username: username,
+                    profileLink: profileLink,
                     soundCount: count,
                     overlapPercentage: overlapPercent,
                     reliabilityScore: calculateReliabilityScore(count, totalSounds),
@@ -954,6 +958,76 @@ HASHTAGS:
         downloadFile(JSON.stringify(exportData, null, 2), 'top-50-creators.json', 'application/json');
         showStatus('✅ Top 50 creators exported as JSON!', 'success');
     });
+
+    // Add new export function for individual sound creator lists
+    function exportSoundCreatorLists() {
+        const soundsWithData = Object.entries(soundsData).filter(([url, data]) => data.usernames.length > 0);
+        
+        if (soundsWithData.length === 0) {
+            showStatus('No sound data to export. Please add creator data first.', 'error');
+            return;
+        }
+        
+        // Create CSV for each sound's creators
+        soundsWithData.forEach(([url, data]) => {
+            const headers = ['Rank', 'Username', 'Profile Link'];
+            const rows = data.usernames.map((username, index) => [
+                index + 1,
+                username,
+                `https://www.tiktok.com/@${username}`
+            ]);
+            
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+            
+            // Clean filename from sound title
+            const cleanTitle = data.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').substring(0, 50);
+            const filename = `creators-${cleanTitle}.csv`;
+            
+            downloadFile(csvContent, filename, 'text/csv');
+        });
+        
+        showStatus(`✅ Exported ${soundsWithData.length} creator list CSV files!`, 'success');
+    }
+
+    // Add new export function for combined sound creators list
+    function exportAllSoundCreators() {
+        const soundsWithData = Object.entries(soundsData).filter(([url, data]) => data.usernames.length > 0);
+        
+        if (soundsWithData.length === 0) {
+            showStatus('No sound data to export. Please add creator data first.', 'error');
+            return;
+        }
+        
+        const headers = ['Sound Title', 'Sound URL', 'Creator Rank', 'Username', 'Profile Link'];
+        const rows = [];
+        
+        soundsWithData.forEach(([url, data]) => {
+            data.usernames.forEach((username, index) => {
+                rows.push([
+                    `"${data.title}"`,
+                    url,
+                    index + 1,
+                    username,
+                    `https://www.tiktok.com/@${username}`
+                ]);
+            });
+        });
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        downloadFile(csvContent, 'all-sound-creators.csv', 'text/csv');
+        showStatus('✅ Combined sound creators CSV exported!', 'success');
+    }
+
+    // Add event listeners for new export buttons
+    document.getElementById('exportSoundLists').addEventListener('click', exportSoundCreatorLists);
+    document.getElementById('exportAllCreators').addEventListener('click', exportAllSoundCreators);
 
     // Utility functions
     function calculateReliabilityScore(soundCount, totalSounds) {
