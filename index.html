@@ -435,18 +435,28 @@
             overflow-y: auto;
         }
         
-        /* Hashtag Styles */
-        .hashtags-grid {
-            max-height: 400px;
-            overflow-y: auto;
+        /* Hashtag Bubble Styles */
+        .hashtags-bubble-container {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f1f1f1;
         }
         
-        .hashtag-item {
-            transition: background-color 0.2s ease;
+        .hashtags-bubble-container::-webkit-scrollbar {
+            width: 6px;
         }
         
-        .hashtag-item:hover {
-            background: #e9ecef !important;
+        .hashtags-bubble-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .hashtags-bubble-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+        
+        .hashtag-bubble {
+            user-select: none;
         }
     </style>
 </head>
