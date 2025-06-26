@@ -318,15 +318,14 @@
         }
         
         .export-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            flex-wrap: wrap;
             margin-top: 20px;
         }
         
         .export-buttons .btn {
-            flex: 1;
-            min-width: 200px;
+            margin-bottom: 0;
         }
         
         .progress-container {
@@ -421,54 +420,42 @@
             font-weight: 600;
         }
         
-        /* Genre insights styling */
-        .genre-insight {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+        /* Genre Analysis Styles */
+        .genre-bars {
+            margin-top: 15px;
         }
         
-        .genre-insight h4 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 16px;
+        .genre-bar {
+            margin-bottom: 12px;
         }
         
-        .genre-insight p {
-            margin: 0 0 15px 0;
-            color: #666;
-            font-size: 14px;
+        .genre-list {
+            max-height: 300px;
+            overflow-y: auto;
         }
         
-        .genre-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        /* Hashtag Bubble Styles */
+        .hashtags-bubble-container {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #f1f1f1;
         }
         
-        .genre-tag {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .hashtags-bubble-container::-webkit-scrollbar {
+            width: 6px;
         }
         
-        .hashtag-link {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
+        .hashtags-bubble-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
         }
         
-        .hashtag-link:hover {
-            text-decoration: underline;
-            color: #5a67d8;
+        .hashtags-bubble-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+        
+        .hashtag-bubble {
+            user-select: none;
         }
     </style>
 </head>
@@ -538,6 +525,18 @@ Paste your TikTok sound URLs here..."></textarea>
                 
                 <div id="soundsList" class="sounds-list"></div>
                 
+                <!-- Hashtags Analysis -->
+                <div id="hashtagsSection" style="margin-bottom: 30px;">
+                    <h3>📊 Top Global Hashtags</h3>
+                    <p style="color: #666; text-align: center; padding: 20px;">Run analysis to see hashtag data</p>
+                </div>
+                
+                <!-- Genre Analysis -->
+                <div id="genreSection" style="margin-bottom: 30px;">
+                    <h3>🎵 Genre Analysis</h3>
+                    <p style="color: #666; text-align: center; padding: 20px;">Run analysis to see genre data</p>
+                </div>
+                
                 <h3 style="margin-bottom: 20px;">🎯 Top Overlapping Creators</h3>
                 
                 <div style="margin-bottom: 20px;">
@@ -566,45 +565,12 @@ Paste your TikTok sound URLs here..."></textarea>
                         </tr>
                     </tbody>
                 </table>
-
-                <!-- Hashtags Analysis Section -->
-                <div id="hashtagsSection" style="margin-top: 40px; display: none;">
-                    <h3 style="margin-bottom: 20px;">🏷️ Hashtag Analysis</h3>
-                    
-                    <div id="genreInsights" style="margin-bottom: 30px;"></div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label for="minHashtagCount">Show hashtags with:</label>
-                        <select id="minHashtagCount" style="margin-left: 10px; padding: 8px; border-radius: 6px; border: 2px solid #e1e8ed;">
-                            <option value="1" selected>1+ uses</option>
-                            <option value="5">5+ uses</option>
-                            <option value="10">10+ uses</option>
-                            <option value="25">25+ uses</option>
-                            <option value="50">50+ uses</option>
-                        </select>
-                    </div>
-                    
-                    <table class="creators-table" id="hashtagsTable">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Hashtag</th>
-                                <th>Usage Count</th>
-                                <th>Sounds</th>
-                            </tr>
-                        </thead>
-                        <tbody id="hashtagsTableBody">
-                            <tr>
-                                <td colspan="4" style="text-align: center; padding: 20px; color: #666;">No hashtag data available</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
                 
                 <div class="export-buttons">
-                    <button id="exportCSV" class="btn secondary">📊 Export CSV</button>
-                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators</button>
-                    <button id="exportHashtags" class="btn secondary">🏷️ Export Hashtags</button>
+                    <button id="exportCSV" class="btn secondary">📊 Export Overlap Analysis CSV</button>
+                    <button id="exportTop50" class="btn secondary">⭐ Top 50 Creators JSON</button>
+                    <button id="exportSoundLists" class="btn secondary">📋 Export Individual Sound Lists</button>
+                    <button id="exportAllCreators" class="btn secondary">📁 Export All Sound Creators</button>
                 </div>
             </div>
         </div>
