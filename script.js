@@ -1,4 +1,4 @@
-// Sound Analysis - Main JavaScript functionality with Last.fm integration
+// Enhanced Sound Analysis - Main JavaScript functionality with improved hashtag analysis
 
 document.addEventListener('DOMContentLoaded', function() {
     // DOM elements
@@ -58,6 +58,183 @@ document.addEventListener('DOMContentLoaded', function() {
             this.processing = false;
         }
     };
+
+    // Enhanced hashtag filtering function
+    function filterRelevantHashtags(hashtags, songTitle, artistName) {
+        // Create lists of words to filter out
+        const songWords = new Set();
+        const artistWords = new Set();
+        
+        // Extract words from song title
+        if (songTitle) {
+            songTitle.toLowerCase()
+                .replace(/[^\w\s]/g, ' ')
+                .split(/\s+/)
+                .filter(word => word.length > 2)
+                .forEach(word => songWords.add(word));
+        }
+        
+        // Extract words from artist name
+        if (artistName) {
+            artistName.toLowerCase()
+                .replace(/[^\w\s]/g, ' ')
+                .split(/\s+/)
+                .filter(word => word.length > 2)
+                .forEach(word => artistWords.add(word));
+        }
+        
+        // Common TikTok hashtags to filter out
+        const commonHashtags = new Set([
+            'tiktok', 'foryoupage', 'fyp', 'foryou', 'viral', 'trending', 
+            'duet', 'follow', 'followme', 'love', 'funny', 'memes', 
+            'cute', 'music', 'dance', 'diy', 'food', 'beauty', 
+            'gaming', 'parati', 'explore', 'trend', 'new', 'like',
+            'comment', 'share', 'video', 'tiktokdance', 'challenge',
+            'sound', 'audio', 'song', 'artist', 'lyrics', 'cover',
+            'remix', 'original', 'xyzbca', 'recommended', 'algorithm'
+        ]);
+        
+        // Filter hashtags
+        return hashtags.filter(([hashtag, count]) => {
+            const tag = hashtag.toLowerCase();
+            
+            // Remove if it's a common hashtag
+            if (commonHashtags.has(tag)) return false;
+            
+            // Remove if it contains song title words
+            if (songWords.size > 0) {
+                for (const word of songWords) {
+                    if (tag.includes(word) || word.includes(tag)) {
+                        console.log(`Filtered hashtag "${hashtag}" - matches song word "${word}"`);
+                        return false;
+                    }
+                }
+            }
+            
+            // Remove if it contains artist name words
+            if (artistWords.size > 0) {
+                for (const word of artistWords) {
+                    if (tag.includes(word) || word.includes(tag)) {
+                        console.log(`Filtered hashtag "${hashtag}" - matches artist word "${word}"`);
+                        return false;
+                    }
+                }
+            }
+            
+            // Keep hashtags that are meaningful length
+            return tag.length > 2 && tag.length < 30;
+        });
+    }
+
+    // Enhanced hashtag-genre analysis function
+    function analyzeHashtagGenreRelationships(soundsWithData, genres) {
+        const genreHashtagMap = {};
+        const hashtagGenreMap = {};
+        const insights = [];
+        
+        // Group hashtags by genre
+        soundsWithData.forEach(([url, data]) => {
+            const { artist, track } = parseSongTitle(data.title);
+            const soundGenre = genres[data.title];
+            
+            if (soundGenre && data.hashtags) {
+                const genreList = soundGenre.split(',').map(g => g.trim().toLowerCase());
+                
+                genreList.forEach(genre => {
+                    if (!genreHashtagMap[genre]) {
+                        genreHashtagMap[genre] = {};
+                    }
+                    
+                    // Filter hashtags for this sound
+                    const relevantHashtags = filterRelevantHashtags(data.hashtags, track, artist);
+                    
+                    relevantHashtags.forEach(([hashtag, count]) => {
+                        if (!genreHashtagMap[genre][hashtag]) {
+                            genreHashtagMap[genre][hashtag] = 0;
+                        }
+                        genreHashtagMap[genre][hashtag] += count;
+                        
+                        // Reverse mapping
+                        if (!hashtagGenreMap[hashtag]) {
+                            hashtagGenreMap[hashtag] = {};
+                        }
+                        if (!hashtagGenreMap[hashtag][genre]) {
+                            hashtagGenreMap[hashtag][genre] = 0;
+                        }
+                        hashtagGenreMap[hashtag][genre] += count;
+                    });
+                });
+            }
+        });
+        
+        // Generate insights
+        Object.entries(genreHashtagMap).forEach(([genre, hashtags]) => {
+            const sortedHashtags = Object.entries(hashtags)
+                .sort(([a, countA], [b, countB]) => countB - countA)
+                .slice(0, 5);
+            
+            if (sortedHashtags.length > 0) {
+                const topHashtag = sortedHashtags[0];
+                const totalCount = Object.values(hashtags).reduce((sum, count) => sum + count, 0);
+                
+                insights.push({
+                    genre: genre,
+                    dominantHashtag: topHashtag[0],
+                    dominantHashtagCount: topHashtag[1],
+                    totalHashtags: Object.keys(hashtags).length,
+                    totalMentions: totalCount,
+                    topHashtags: sortedHashtags,
+                    insight: generateGenreInsight(genre, sortedHashtags, totalCount)
+                });
+            }
+        });
+        
+        // Find cross-genre hashtags
+        const crossGenreHashtags = Object.entries(hashtagGenreMap)
+            .filter(([hashtag, genres]) => Object.keys(genres).length > 1)
+            .map(([hashtag, genres]) => ({
+                hashtag,
+                genres: Object.entries(genres).sort(([a, countA], [b, countB]) => countB - countA),
+                totalCount: Object.values(genres).reduce((sum, count) => sum + count, 0)
+            }))
+            .sort((a, b) => b.totalCount - a.totalCount)
+            .slice(0, 10);
+        
+        return {
+            genreHashtagMap,
+            hashtagGenreMap,
+            insights: insights.sort((a, b) => b.totalMentions - a.totalMentions),
+            crossGenreHashtags
+        };
+    }
+
+    // Generate insight text for genre-hashtag combinations
+    function generateGenreInsight(genre, topHashtags, totalCount) {
+        const dominantHashtag = topHashtags[0];
+        const dominance = Math.round((dominantHashtag[1] / totalCount) * 100);
+        
+        const genreInsights = {
+            'pop': 'Pop music hashtags often focus on mainstream appeal and broad audience engagement',
+            'hip hop': 'Hip hop hashtags frequently emphasize authenticity, street culture, and lifestyle',
+            'electronic': 'Electronic music hashtags tend to highlight production techniques and festival culture',
+            'rock': 'Rock hashtags often celebrate energy, rebellion, and musical instruments',
+            'indie': 'Indie hashtags emphasize creativity, authenticity, and alternative culture',
+            'r&b': 'R&B hashtags focus on smooth vocals, romance, and soulful expression',
+            'country': 'Country music hashtags celebrate rural life, storytelling, and traditional values',
+            'jazz': 'Jazz hashtags highlight improvisation, sophistication, and musical complexity',
+            'classical': 'Classical music hashtags emphasize tradition, elegance, and technical mastery'
+        };
+        
+        const baseInsight = genreInsights[genre] || `${genre.charAt(0).toUpperCase() + genre.slice(1)} music shows unique hashtag patterns`;
+        
+        if (dominance > 50) {
+            return `${baseInsight}. The hashtag #${dominantHashtag[0]} dominates with ${dominance}% of mentions, suggesting a strong thematic focus.`;
+        } else if (topHashtags.length > 3) {
+            return `${baseInsight}. Hashtag usage is diverse across ${topHashtags.length} main tags, indicating varied audience engagement strategies.`;
+        } else {
+            return `${baseInsight}. Moderate hashtag concentration suggests balanced content strategy.`;
+        }
+    }
 
     // Utility functions
     function showStatus(message, type = 'info') {
@@ -478,11 +655,18 @@ HASHTAGS:
             })
             .filter(([,count]) => count >= 2); // Only show creators appearing in multiple sounds
         
-        // Analyze hashtags across all sounds
+        // Enhanced hashtag analysis across all sounds
         const globalHashtags = {};
+        const soundGenres = {}; // Store genre info for later use
+        
         soundsWithData.forEach(([soundUrl, data]) => {
             if (data.hashtags && Array.isArray(data.hashtags)) {
-                data.hashtags.forEach(([hashtag, count]) => {
+                const { artist, track } = parseSongTitle(data.title);
+                
+                // Apply enhanced filtering
+                const filteredHashtags = filterRelevantHashtags(data.hashtags, track, artist);
+                
+                filteredHashtags.forEach(([hashtag, count]) => {
                     if (!globalHashtags[hashtag]) {
                         globalHashtags[hashtag] = 0;
                     }
@@ -501,7 +685,8 @@ HASHTAGS:
             creatorSounds,
             sortedCreators,
             globalHashtags: sortedHashtags,
-            totalSoundsAnalyzed: soundsWithData.length
+            totalSoundsAnalyzed: soundsWithData.length,
+            soundGenres // Store for later use in genre analysis
         };
     }
 
@@ -519,7 +704,7 @@ HASHTAGS:
         }, 500);
     }
 
-    // Display hashtag analysis (consolidated with bubble style)
+    // Enhanced hashtag analysis display with clickable links
     function displayHashtagAnalysis() {
         const hashtagsSection = document.getElementById('hashtagsSection');
         if (!hashtagsSection) return;
@@ -528,14 +713,20 @@ HASHTAGS:
         
         if (!globalHashtags || globalHashtags.length === 0) {
             hashtagsSection.innerHTML = `
-                <h3>📊 Top Global Hashtags</h3>
-                <p style="color: #666; text-align: center; padding: 20px;">No hashtags found in the analyzed sounds</p>
+                <h3>📊 Top Social Hashtags</h3>
+                <p style="color: #666; text-align: center; padding: 20px;">No relevant hashtags found in the analyzed sounds</p>
+                <div style="font-size: 12px; color: #888; text-align: center; margin-top: 10px;">
+                    Note: Common hashtags and artist/song-related tags are filtered out for better insights
+                </div>
             `;
             return;
         }
         
         hashtagsSection.innerHTML = `
-            <h3>📊 Top Global Hashtags (${globalHashtags.length} found)</h3>
+            <h3>📊 Top Social Hashtags (${globalHashtags.length} found)</h3>
+            <div style="font-size: 12px; color: #666; margin-bottom: 15px; padding: 10px; background: #f0f8ff; border-radius: 8px;">
+                💡 <strong>Enhanced Analysis:</strong> Artist names, song titles, and common TikTok hashtags have been filtered out to reveal meaningful social trends. Click any hashtag to explore it on TikTok!
+            </div>
             <div class="hashtags-bubble-container" style="
                 display: flex; 
                 flex-wrap: wrap; 
@@ -560,7 +751,10 @@ HASHTAGS:
                     const bgColor = `rgba(102, 126, 234, ${0.1 + (normalizedSize * 0.2)})`; // 0.1 to 0.3 opacity
                     
                     return `
-                        <span class="hashtag-bubble" style="
+                        <a href="https://www.tiktok.com/tag/${encodeURIComponent(hashtag)}" 
+                           target="_blank" 
+                           class="hashtag-bubble" 
+                           style="
                             display: inline-block;
                             background: ${bgColor};
                             color: #667eea;
@@ -570,12 +764,13 @@ HASHTAGS:
                             font-weight: 600;
                             border: 2px solid rgba(102, 126, 234, ${0.2 + (normalizedSize * 0.3)});
                             transition: transform 0.2s ease, box-shadow 0.2s ease;
-                            cursor: default;
+                            cursor: pointer;
                             white-space: nowrap;
+                            text-decoration: none;
                         " 
                         onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'" 
                         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'"
-                        title="Used ${count} times across sounds"
+                        title="Used ${count} times across sounds - Click to explore on TikTok"
                         >
                             #${escapeHtml(hashtag)} <span style="
                                 background: rgba(102, 126, 234, 0.2); 
@@ -584,14 +779,17 @@ HASHTAGS:
                                 font-size: 0.8em; 
                                 margin-left: 4px;
                             ">${count}</span>
-                        </span>
+                        </a>
                     `;
                 }).join('')}
+            </div>
+            <div style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">
+                🔗 Click any hashtag to explore its TikTok page in a new tab
             </div>
         `;
     }
 
-    // Display genre analysis
+    // Enhanced genre analysis with hashtag relationships
     function displayGenreAnalysis() {
         const genreSection = document.getElementById('genreSection');
         if (!genreSection) return;
@@ -607,17 +805,17 @@ HASHTAGS:
         }
         
         genreSection.innerHTML = `
-            <h3>🎵 Genre Analysis</h3>
+            <h3>🎵 Genre & Hashtag Analysis</h3>
             <div id="genreAnalysisContent">
                 <div style="text-align: center; padding: 20px;">
                     <div class="spinner" style="margin: 0 auto 10px;"></div>
-                    <p>Analyzing genres using Last.fm API...</p>
+                    <p>Analyzing genres and hashtag relationships using Last.fm API...</p>
                 </div>
             </div>
         `;
         
-        // Start genre analysis
-        analyzeGenres(soundsWithData);
+        // Start enhanced genre analysis
+        analyzeGenresWithHashtags(soundsWithData);
     }
 
     // Parse song title to extract artist and track
@@ -729,13 +927,14 @@ HASHTAGS:
         }
     }
 
-    // Analyze genres using Last.fm API
-    async function analyzeGenres(soundsWithData) {
+    // Enhanced genre analysis with hashtag relationships
+    async function analyzeGenresWithHashtags(soundsWithData) {
         const genreAnalysisContent = document.getElementById('genreAnalysisContent');
         const genres = {};
         const soundGenres = {};
         
         try {
+            // First, get genres for all sounds
             for (let i = 0; i < soundsWithData.length; i++) {
                 const [url, data] = soundsWithData[i];
                 
@@ -765,8 +964,11 @@ HASHTAGS:
                 }
             }
             
-            // Display results
-            displayGenreResults(genres, soundGenres);
+            // Now analyze hashtag-genre relationships
+            const hashtagGenreAnalysis = analyzeHashtagGenreRelationships(soundsWithData, soundGenres);
+            
+            // Display comprehensive results
+            displayEnhancedGenreResults(genres, soundGenres, hashtagGenreAnalysis);
             
         } catch (error) {
             console.error('Genre analysis error:', error);
@@ -784,8 +986,8 @@ HASHTAGS:
         }
     }
 
-    // Display genre analysis results
-    function displayGenreResults(genres, soundGenres) {
+    // Display enhanced genre analysis results with hashtag relationships
+    function displayEnhancedGenreResults(genres, soundGenres, hashtagGenreAnalysis) {
         const genreAnalysisContent = document.getElementById('genreAnalysisContent');
         
         const sortedGenres = Object.entries(genres)
@@ -801,7 +1003,7 @@ HASHTAGS:
         
         genreAnalysisContent.innerHTML = `
             <div class="genre-overview" style="margin-bottom: 30px;">
-                <h4>Top Genres Across All Sounds</h4>
+                <h4>🎭 Genre Distribution</h4>
                 <div class="genre-bars">
                     ${sortedGenres.map(([genre, count]) => {
                         const percentage = Math.round((count / Object.values(genres).reduce((a, b) => a + b, 0)) * 100);
@@ -819,9 +1021,56 @@ HASHTAGS:
                     }).join('')}
                 </div>
             </div>
+
+            ${hashtagGenreAnalysis.insights.length > 0 ? `
+            <div class="genre-hashtag-insights" style="margin-bottom: 30px;">
+                <h4>💡 Genre-Hashtag Insights</h4>
+                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px;">
+                    ${hashtagGenreAnalysis.insights.slice(0, 5).map(insight => `
+                        <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 5px; text-transform: capitalize;">
+                                🎵 ${escapeHtml(insight.genre)} (${insight.totalHashtags} unique hashtags, ${insight.totalMentions} total uses)
+                            </div>
+                            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">
+                                ${insight.insight}
+                            </div>
+                            <div style="font-size: 12px; color: #888;">
+                                <strong>Top hashtags:</strong> 
+                                ${insight.topHashtags.slice(0, 3).map(([hashtag, count]) => 
+                                    `<a href="https://www.tiktok.com/tag/${encodeURIComponent(hashtag)}" target="_blank" style="color: #667eea; text-decoration: none;">#${hashtag}</a> (${count})`
+                                ).join(', ')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            ${hashtagGenreAnalysis.crossGenreHashtags.length > 0 ? `
+            <div class="cross-genre-hashtags" style="margin-bottom: 30px;">
+                <h4>🔄 Cross-Genre Hashtags</h4>
+                <div style="background: #fff3e0; border-radius: 10px; padding: 15px;">
+                    <p style="font-size: 14px; color: #e65100; margin-bottom: 15px;">
+                        These hashtags appear across multiple genres, indicating broad appeal or versatile content themes:
+                    </p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${hashtagGenreAnalysis.crossGenreHashtags.slice(0, 10).map(item => `
+                            <div style="background: white; border: 2px solid #ff9800; border-radius: 20px; padding: 8px 12px; font-size: 12px;">
+                                <a href="https://www.tiktok.com/tag/${encodeURIComponent(item.hashtag)}" target="_blank" style="color: #e65100; text-decoration: none; font-weight: 600;">
+                                    #${escapeHtml(item.hashtag)}
+                                </a>
+                                <span style="color: #666; margin-left: 4px;">
+                                    (${item.genres.length} genres, ${item.totalCount} uses)
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+            ` : ''}
             
             <div class="sound-genres">
-                <h4>Individual Sound Genres</h4>
+                <h4>🎼 Individual Sound Analysis</h4>
                 <div class="genre-list">
                     ${Object.entries(soundGenres).map(([title, genre]) => `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
